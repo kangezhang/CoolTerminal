@@ -87,6 +87,27 @@ function switchPlatformTab(platform) {
     }
 }
 
+// 将命令插入到输入框
+function insertCommand(command) {
+    const input = document.getElementById('terminalInput');
+    if (input) {
+        // 追加命令到现有内容后面
+        const currentValue = input.value;
+        if (currentValue && !currentValue.endsWith(' ')) {
+            input.value = currentValue + ' ' + command;
+        } else {
+            input.value = currentValue + command;
+        }
+
+        // 关闭模态框
+        closeCommandReference();
+
+        // 聚焦输入框并将光标移到末尾
+        input.focus();
+        input.setSelectionRange(input.value.length, input.value.length);
+    }
+}
+
 // Sidebar 收缩/展开
 function toggleSidebar() {
     const sidebar = document.getElementById('sidebar');

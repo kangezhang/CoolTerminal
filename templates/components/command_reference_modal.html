@@ -31,35 +31,35 @@
                     <h3 class="category-title">文件和目录</h3>
                     <div class="command-list">
                         <div class="command-item">
-                            <code class="command-name">dir</code>
+                            <code class="command-name" onclick="insertCommand('dir')" style="cursor: pointer;" title="点击插入到输入框">dir</code>
                             <span class="command-desc">列出目录内容</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">cd [路径]</code>
+                            <code class="command-name" onclick="insertCommand('cd [路径]')" style="cursor: pointer;" title="点击插入到输入框">cd [路径]</code>
                             <span class="command-desc">切换目录</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">mkdir [目录名]</code>
+                            <code class="command-name" onclick="insertCommand('mkdir [目录名]')" style="cursor: pointer;" title="点击插入到输入框">mkdir [目录名]</code>
                             <span class="command-desc">创建目录</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">rmdir [目录名]</code>
+                            <code class="command-name" onclick="insertCommand('rmdir [目录名]')" style="cursor: pointer;" title="点击插入到输入框">rmdir [目录名]</code>
                             <span class="command-desc">删除目录</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">copy [源] [目标]</code>
+                            <code class="command-name" onclick="insertCommand('copy [源] [目标]')" style="cursor: pointer;" title="点击插入到输入框">copy [源] [目标]</code>
                             <span class="command-desc">复制文件</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">move [源] [目标]</code>
+                            <code class="command-name" onclick="insertCommand('move [源] [目标]')" style="cursor: pointer;" title="点击插入到输入框">move [源] [目标]</code>
                             <span class="command-desc">移动文件</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">del [文件]</code>
+                            <code class="command-name" onclick="insertCommand('del [文件]')" style="cursor: pointer;" title="点击插入到输入框">del [文件]</code>
                             <span class="command-desc">删除文件</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">type [文件]</code>
+                            <code class="command-name" onclick="insertCommand('type [文件]')" style="cursor: pointer;" title="点击插入到输入框">type [文件]</code>
                             <span class="command-desc">显示文件内容</span>
                         </div>
                     </div>
@@ -69,19 +69,19 @@
                     <h3 class="category-title">系统信息</h3>
                     <div class="command-list">
                         <div class="command-item">
-                            <code class="command-name">systeminfo</code>
+                            <code class="command-name" onclick="insertCommand('systeminfo')" style="cursor: pointer;" title="点击插入到输入框">systeminfo</code>
                             <span class="command-desc">显示系统信息</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">hostname</code>
+                            <code class="command-name" onclick="insertCommand('hostname')" style="cursor: pointer;" title="点击插入到输入框">hostname</code>
                             <span class="command-desc">显示计算机名</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">ver</code>
+                            <code class="command-name" onclick="insertCommand('ver')" style="cursor: pointer;" title="点击插入到输入框">ver</code>
                             <span class="command-desc">显示系统版本</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">whoami</code>
+                            <code class="command-name" onclick="insertCommand('whoami')" style="cursor: pointer;" title="点击插入到输入框">whoami</code>
                             <span class="command-desc">显示当前用户</span>
                         </div>
                     </div>
@@ -91,19 +91,19 @@
                     <h3 class="category-title">网络</h3>
                     <div class="command-list">
                         <div class="command-item">
-                            <code class="command-name">ipconfig</code>
+                            <code class="command-name" onclick="insertCommand('ipconfig')" style="cursor: pointer;" title="点击插入到输入框">ipconfig</code>
                             <span class="command-desc">显示IP配置</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">ping [地址]</code>
+                            <code class="command-name" onclick="insertCommand('ping [地址]')" style="cursor: pointer;" title="点击插入到输入框">ping [地址]</code>
                             <span class="command-desc">测试网络连接</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">netstat</code>
+                            <code class="command-name" onclick="insertCommand('netstat')" style="cursor: pointer;" title="点击插入到输入框">netstat</code>
                             <span class="command-desc">显示网络连接</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">tracert [地址]</code>
+                            <code class="command-name" onclick="insertCommand('tracert [地址]')" style="cursor: pointer;" title="点击插入到输入框">tracert [地址]</code>
                             <span class="command-desc">追踪路由</span>
                         </div>
                     </div>
@@ -113,15 +113,15 @@
                     <h3 class="category-title">进程和服务</h3>
                     <div class="command-list">
                         <div class="command-item">
-                            <code class="command-name">tasklist</code>
+                            <code class="command-name" onclick="insertCommand('tasklist')" style="cursor: pointer;" title="点击插入到输入框">tasklist</code>
                             <span class="command-desc">列出所有进程</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">taskkill /PID [进程ID]</code>
+                            <code class="command-name" onclick="insertCommand('taskkill /PID [进程ID]')" style="cursor: pointer;" title="点击插入到输入框">taskkill /PID [进程ID]</code>
                             <span class="command-desc">终止进程</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">sc query</code>
+                            <code class="command-name" onclick="insertCommand('sc query')" style="cursor: pointer;" title="点击插入到输入框">sc query</code>
                             <span class="command-desc">查询服务状态</span>
                         </div>
                     </div>
@@ -134,39 +134,39 @@
                     <h3 class="category-title">文件和目录</h3>
                     <div class="command-list">
                         <div class="command-item">
-                            <code class="command-name">ls [-la]</code>
+                            <code class="command-name" onclick="insertCommand('ls [-la]')" style="cursor: pointer;" title="点击插入到输入框">ls [-la]</code>
                             <span class="command-desc">列出目录内容</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">cd [路径]</code>
+                            <code class="command-name" onclick="insertCommand('cd [路径]')" style="cursor: pointer;" title="点击插入到输入框">cd [路径]</code>
                             <span class="command-desc">切换目录</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">pwd</code>
+                            <code class="command-name" onclick="insertCommand('pwd')" style="cursor: pointer;" title="点击插入到输入框">pwd</code>
                             <span class="command-desc">显示当前目录</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">mkdir [目录名]</code>
+                            <code class="command-name" onclick="insertCommand('mkdir [目录名]')" style="cursor: pointer;" title="点击插入到输入框">mkdir [目录名]</code>
                             <span class="command-desc">创建目录</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">rm [-rf] [文件/目录]</code>
+                            <code class="command-name" onclick="insertCommand('rm [-rf] [文件/目录]')" style="cursor: pointer;" title="点击插入到输入框">rm [-rf] [文件/目录]</code>
                             <span class="command-desc">删除文件或目录</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">cp [-r] [源] [目标]</code>
+                            <code class="command-name" onclick="insertCommand('cp [-r] [源] [目标]')" style="cursor: pointer;" title="点击插入到输入框">cp [-r] [源] [目标]</code>
                             <span class="command-desc">复制文件或目录</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">mv [源] [目标]</code>
+                            <code class="command-name" onclick="insertCommand('mv [源] [目标]')" style="cursor: pointer;" title="点击插入到输入框">mv [源] [目标]</code>
                             <span class="command-desc">移动或重命名</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">cat [文件]</code>
+                            <code class="command-name" onclick="insertCommand('cat [文件]')" style="cursor: pointer;" title="点击插入到输入框">cat [文件]</code>
                             <span class="command-desc">显示文件内容</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">find [路径] -name [名称]</code>
+                            <code class="command-name" onclick="insertCommand('find [路径] -name [名称]')" style="cursor: pointer;" title="点击插入到输入框">find [路径] -name [名称]</code>
                             <span class="command-desc">查找文件</span>
                         </div>
                     </div>
@@ -176,27 +176,27 @@
                     <h3 class="category-title">系统信息</h3>
                     <div class="command-list">
                         <div class="command-item">
-                            <code class="command-name">uname -a</code>
+                            <code class="command-name" onclick="insertCommand('uname -a')" style="cursor: pointer;" title="点击插入到输入框">uname -a</code>
                             <span class="command-desc">显示系统信息</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">sw_vers</code>
+                            <code class="command-name" onclick="insertCommand('sw_vers')" style="cursor: pointer;" title="点击插入到输入框">sw_vers</code>
                             <span class="command-desc">显示 macOS 版本</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">hostname</code>
+                            <code class="command-name" onclick="insertCommand('hostname')" style="cursor: pointer;" title="点击插入到输入框">hostname</code>
                             <span class="command-desc">显示主机名</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">whoami</code>
+                            <code class="command-name" onclick="insertCommand('whoami')" style="cursor: pointer;" title="点击插入到输入框">whoami</code>
                             <span class="command-desc">显示当前用户</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">df -h</code>
+                            <code class="command-name" onclick="insertCommand('df -h')" style="cursor: pointer;" title="点击插入到输入框">df -h</code>
                             <span class="command-desc">显示磁盘使用情况</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">top</code>
+                            <code class="command-name" onclick="insertCommand('top')" style="cursor: pointer;" title="点击插入到输入框">top</code>
                             <span class="command-desc">显示进程和资源</span>
                         </div>
                     </div>
@@ -206,19 +206,19 @@
                     <h3 class="category-title">网络</h3>
                     <div class="command-list">
                         <div class="command-item">
-                            <code class="command-name">ifconfig</code>
+                            <code class="command-name" onclick="insertCommand('ifconfig')" style="cursor: pointer;" title="点击插入到输入框">ifconfig</code>
                             <span class="command-desc">显示网络配置</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">ping [地址]</code>
+                            <code class="command-name" onclick="insertCommand('ping [地址]')" style="cursor: pointer;" title="点击插入到输入框">ping [地址]</code>
                             <span class="command-desc">测试网络连接</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">netstat -an</code>
+                            <code class="command-name" onclick="insertCommand('netstat -an')" style="cursor: pointer;" title="点击插入到输入框">netstat -an</code>
                             <span class="command-desc">显示网络连接</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">curl [URL]</code>
+                            <code class="command-name" onclick="insertCommand('curl [URL]')" style="cursor: pointer;" title="点击插入到输入框">curl [URL]</code>
                             <span class="command-desc">传输数据</span>
                         </div>
                     </div>
@@ -228,23 +228,23 @@
                     <h3 class="category-title">进程和权限</h3>
                     <div class="command-list">
                         <div class="command-item">
-                            <code class="command-name">ps aux</code>
+                            <code class="command-name" onclick="insertCommand('ps aux')" style="cursor: pointer;" title="点击插入到输入框">ps aux</code>
                             <span class="command-desc">列出所有进程</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">kill [PID]</code>
+                            <code class="command-name" onclick="insertCommand('kill [PID]')" style="cursor: pointer;" title="点击插入到输入框">kill [PID]</code>
                             <span class="command-desc">终止进程</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">sudo [命令]</code>
+                            <code class="command-name" onclick="insertCommand('sudo [命令]')" style="cursor: pointer;" title="点击插入到输入框">sudo [命令]</code>
                             <span class="command-desc">以管理员权限执行</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">chmod [权限] [文件]</code>
+                            <code class="command-name" onclick="insertCommand('chmod [权限] [文件]')" style="cursor: pointer;" title="点击插入到输入框">chmod [权限] [文件]</code>
                             <span class="command-desc">修改文件权限</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">chown [用户] [文件]</code>
+                            <code class="command-name" onclick="insertCommand('chown [用户] [文件]')" style="cursor: pointer;" title="点击插入到输入框">chown [用户] [文件]</code>
                             <span class="command-desc">修改文件所有者</span>
                         </div>
                     </div>
@@ -254,15 +254,15 @@
                     <h3 class="category-title">Homebrew (包管理)</h3>
                     <div class="command-list">
                         <div class="command-item">
-                            <code class="command-name">brew install [包名]</code>
+                            <code class="command-name" onclick="insertCommand('brew install [包名]')" style="cursor: pointer;" title="点击插入到输入框">brew install [包名]</code>
                             <span class="command-desc">安装软件包</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">brew update</code>
+                            <code class="command-name" onclick="insertCommand('brew update')" style="cursor: pointer;" title="点击插入到输入框">brew update</code>
                             <span class="command-desc">更新 Homebrew</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">brew list</code>
+                            <code class="command-name" onclick="insertCommand('brew list')" style="cursor: pointer;" title="点击插入到输入框">brew list</code>
                             <span class="command-desc">列出已安装的包</span>
                         </div>
                     </div>
@@ -275,43 +275,43 @@
                     <h3 class="category-title">文件和目录</h3>
                     <div class="command-list">
                         <div class="command-item">
-                            <code class="command-name">ls [-lah]</code>
+                            <code class="command-name" onclick="insertCommand('ls [-lah]')" style="cursor: pointer;" title="点击插入到输入框">ls [-lah]</code>
                             <span class="command-desc">列出目录内容</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">cd [路径]</code>
+                            <code class="command-name" onclick="insertCommand('cd [路径]')" style="cursor: pointer;" title="点击插入到输入框">cd [路径]</code>
                             <span class="command-desc">切换目录</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">pwd</code>
+                            <code class="command-name" onclick="insertCommand('pwd')" style="cursor: pointer;" title="点击插入到输入框">pwd</code>
                             <span class="command-desc">显示当前目录</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">mkdir [-p] [目录名]</code>
+                            <code class="command-name" onclick="insertCommand('mkdir [-p] [目录名]')" style="cursor: pointer;" title="点击插入到输入框">mkdir [-p] [目录名]</code>
                             <span class="command-desc">创建目录</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">rm [-rf] [文件/目录]</code>
+                            <code class="command-name" onclick="insertCommand('rm [-rf] [文件/目录]')" style="cursor: pointer;" title="点击插入到输入框">rm [-rf] [文件/目录]</code>
                             <span class="command-desc">删除文件或目录</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">cp [-r] [源] [目标]</code>
+                            <code class="command-name" onclick="insertCommand('cp [-r] [源] [目标]')" style="cursor: pointer;" title="点击插入到输入框">cp [-r] [源] [目标]</code>
                             <span class="command-desc">复制文件或目录</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">mv [源] [目标]</code>
+                            <code class="command-name" onclick="insertCommand('mv [源] [目标]')" style="cursor: pointer;" title="点击插入到输入框">mv [源] [目标]</code>
                             <span class="command-desc">移动或重命名</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">cat [文件]</code>
+                            <code class="command-name" onclick="insertCommand('cat [文件]')" style="cursor: pointer;" title="点击插入到输入框">cat [文件]</code>
                             <span class="command-desc">显示文件内容</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">grep [模式] [文件]</code>
+                            <code class="command-name" onclick="insertCommand('grep [模式] [文件]')" style="cursor: pointer;" title="点击插入到输入框">grep [模式] [文件]</code>
                             <span class="command-desc">搜索文本</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">find [路径] -name [名称]</code>
+                            <code class="command-name" onclick="insertCommand('find [路径] -name [名称]')" style="cursor: pointer;" title="点击插入到输入框">find [路径] -name [名称]</code>
                             <span class="command-desc">查找文件</span>
                         </div>
                     </div>
@@ -321,35 +321,35 @@
                     <h3 class="category-title">系统信息</h3>
                     <div class="command-list">
                         <div class="command-item">
-                            <code class="command-name">uname -a</code>
+                            <code class="command-name" onclick="insertCommand('uname -a')" style="cursor: pointer;" title="点击插入到输入框">uname -a</code>
                             <span class="command-desc">显示系统信息</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">lsb_release -a</code>
+                            <code class="command-name" onclick="insertCommand('lsb_release -a')" style="cursor: pointer;" title="点击插入到输入框">lsb_release -a</code>
                             <span class="command-desc">显示发行版信息</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">hostname</code>
+                            <code class="command-name" onclick="insertCommand('hostname')" style="cursor: pointer;" title="点击插入到输入框">hostname</code>
                             <span class="command-desc">显示主机名</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">whoami</code>
+                            <code class="command-name" onclick="insertCommand('whoami')" style="cursor: pointer;" title="点击插入到输入框">whoami</code>
                             <span class="command-desc">显示当前用户</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">df -h</code>
+                            <code class="command-name" onclick="insertCommand('df -h')" style="cursor: pointer;" title="点击插入到输入框">df -h</code>
                             <span class="command-desc">显示磁盘使用情况</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">free -h</code>
+                            <code class="command-name" onclick="insertCommand('free -h')" style="cursor: pointer;" title="点击插入到输入框">free -h</code>
                             <span class="command-desc">显示内存使用情况</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">top / htop</code>
+                            <code class="command-name" onclick="insertCommand('top / htop')" style="cursor: pointer;" title="点击插入到输入框">top / htop</code>
                             <span class="command-desc">显示进程和资源</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">uptime</code>
+                            <code class="command-name" onclick="insertCommand('uptime')" style="cursor: pointer;" title="点击插入到输入框">uptime</code>
                             <span class="command-desc">显示系统运行时间</span>
                         </div>
                     </div>
@@ -359,27 +359,27 @@
                     <h3 class="category-title">网络</h3>
                     <div class="command-list">
                         <div class="command-item">
-                            <code class="command-name">ip addr</code>
+                            <code class="command-name" onclick="insertCommand('ip addr')" style="cursor: pointer;" title="点击插入到输入框">ip addr</code>
                             <span class="command-desc">显示网络接口</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">ping [地址]</code>
+                            <code class="command-name" onclick="insertCommand('ping [地址]')" style="cursor: pointer;" title="点击插入到输入框">ping [地址]</code>
                             <span class="command-desc">测试网络连接</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">netstat -tulpn</code>
+                            <code class="command-name" onclick="insertCommand('netstat -tulpn')" style="cursor: pointer;" title="点击插入到输入框">netstat -tulpn</code>
                             <span class="command-desc">显示网络连接</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">ss -tulpn</code>
+                            <code class="command-name" onclick="insertCommand('ss -tulpn')" style="cursor: pointer;" title="点击插入到输入框">ss -tulpn</code>
                             <span class="command-desc">显示套接字统计</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">curl [URL]</code>
+                            <code class="command-name" onclick="insertCommand('curl [URL]')" style="cursor: pointer;" title="点击插入到输入框">curl [URL]</code>
                             <span class="command-desc">传输数据</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">wget [URL]</code>
+                            <code class="command-name" onclick="insertCommand('wget [URL]')" style="cursor: pointer;" title="点击插入到输入框">wget [URL]</code>
                             <span class="command-desc">下载文件</span>
                         </div>
                     </div>
@@ -389,23 +389,23 @@
                     <h3 class="category-title">进程和权限</h3>
                     <div class="command-list">
                         <div class="command-item">
-                            <code class="command-name">ps aux</code>
+                            <code class="command-name" onclick="insertCommand('ps aux')" style="cursor: pointer;" title="点击插入到输入框">ps aux</code>
                             <span class="command-desc">列出所有进程</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">kill [-9] [PID]</code>
+                            <code class="command-name" onclick="insertCommand('kill [-9] [PID]')" style="cursor: pointer;" title="点击插入到输入框">kill [-9] [PID]</code>
                             <span class="command-desc">终止进程</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">sudo [命令]</code>
+                            <code class="command-name" onclick="insertCommand('sudo [命令]')" style="cursor: pointer;" title="点击插入到输入框">sudo [命令]</code>
                             <span class="command-desc">以 root 权限执行</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">chmod [权限] [文件]</code>
+                            <code class="command-name" onclick="insertCommand('chmod [权限] [文件]')" style="cursor: pointer;" title="点击插入到输入框">chmod [权限] [文件]</code>
                             <span class="command-desc">修改文件权限</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">chown [用户]:[组] [文件]</code>
+                            <code class="command-name" onclick="insertCommand('chown [用户]:[组] [文件]')" style="cursor: pointer;" title="点击插入到输入框">chown [用户]:[组] [文件]</code>
                             <span class="command-desc">修改文件所有者</span>
                         </div>
                     </div>
@@ -415,19 +415,19 @@
                     <h3 class="category-title">包管理</h3>
                     <div class="command-list">
                         <div class="command-item">
-                            <code class="command-name">apt update</code>
+                            <code class="command-name" onclick="insertCommand('apt update')" style="cursor: pointer;" title="点击插入到输入框">apt update</code>
                             <span class="command-desc">更新包列表 (Debian/Ubuntu)</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">apt install [包名]</code>
+                            <code class="command-name" onclick="insertCommand('apt install [包名]')" style="cursor: pointer;" title="点击插入到输入框">apt install [包名]</code>
                             <span class="command-desc">安装软件包 (Debian/Ubuntu)</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">yum install [包名]</code>
+                            <code class="command-name" onclick="insertCommand('yum install [包名]')" style="cursor: pointer;" title="点击插入到输入框">yum install [包名]</code>
                             <span class="command-desc">安装软件包 (RedHat/CentOS)</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">dnf install [包名]</code>
+                            <code class="command-name" onclick="insertCommand('dnf install [包名]')" style="cursor: pointer;" title="点击插入到输入框">dnf install [包名]</code>
                             <span class="command-desc">安装软件包 (Fedora)</span>
                         </div>
                     </div>
@@ -437,19 +437,19 @@
                     <h3 class="category-title">系统管理</h3>
                     <div class="command-list">
                         <div class="command-item">
-                            <code class="command-name">systemctl status [服务]</code>
+                            <code class="command-name" onclick="insertCommand('systemctl status [服务]')" style="cursor: pointer;" title="点击插入到输入框">systemctl status [服务]</code>
                             <span class="command-desc">查看服务状态</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">systemctl start [服务]</code>
+                            <code class="command-name" onclick="insertCommand('systemctl start [服务]')" style="cursor: pointer;" title="点击插入到输入框">systemctl start [服务]</code>
                             <span class="command-desc">启动服务</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">systemctl stop [服务]</code>
+                            <code class="command-name" onclick="insertCommand('systemctl stop [服务]')" style="cursor: pointer;" title="点击插入到输入框">systemctl stop [服务]</code>
                             <span class="command-desc">停止服务</span>
                         </div>
                         <div class="command-item">
-                            <code class="command-name">systemctl enable [服务]</code>
+                            <code class="command-name" onclick="insertCommand('systemctl enable [服务]')" style="cursor: pointer;" title="点击插入到输入框">systemctl enable [服务]</code>
                             <span class="command-desc">设置服务开机自启</span>
                         </div>
                     </div>
