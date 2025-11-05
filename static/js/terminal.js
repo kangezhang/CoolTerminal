@@ -92,6 +92,14 @@ class Terminal {
                 TerminalManager.scrollToBottom();
                 await this.sleep(this.typingSpeed);
             }
+
+            // 打字完成后，将最终内容同步回 outputHtml
+            // 找到这一行在 outputHtml 中的位置并更新
+            const escapedText = this.escapeHtml(text);
+            this.outputHtml = this.outputHtml.replace(
+                `<span class="terminal-result ${className}" id="${lineId}"></span>`,
+                `<span class="terminal-result ${className}">${escapedText}</span>`
+            );
         }
 
         this.isTyping = false;
@@ -297,8 +305,7 @@ const TerminalManager = {
         // 执行命令
         await terminal.executeCommand(command);
 
-        // 更新输出和历史面板
-        this.updateCurrentTerminalOutput();
+        // 更新历史面板（输出已在 typeOutput 中更新）
         this.updateHistoryPanel();
     },
 
