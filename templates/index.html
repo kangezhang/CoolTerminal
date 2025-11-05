@@ -1,9 +1,17 @@
 {% extends "base.html" %}
 
-{% block title %}Sync Chat - 主页{% endblock %}
+{% block title %}CoolTerminal - 现代化终端模拟器{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/terminal.css') }}">
+{% endblock %}
 
 {% block content %}
-    <div id="ai-chat-tab" class="tab-content">
+    <div id="terminal-tab" class="tab-content">
+        {% include 'pages/terminal_tab.html' %}
+    </div>
+
+    <div id="ai-chat-tab" class="tab-content hidden">
         {% include 'pages/ai_chat_tab.html' %}
     </div>
 
@@ -29,6 +37,7 @@
     <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/lib/highlight.min.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/atom-one-dark.min.css">
 
+    <script src="{{ url_for('static', filename='js/terminal.js') }}?v=1.0.0"></script>
     <script src="{{ url_for('static', filename='js/chat.js') }}?v=4.3.1"></script>
     <script src="{{ url_for('static', filename='js/device.js') }}?v=4.3.1"></script>
     <script src="{{ url_for('static', filename='js/ai_chat.js') }}?v=4.3.1"></script>

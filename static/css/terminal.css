@@ -1,0 +1,441 @@
+/* ==== terminal.css - 终端专用样式 ==== */
+
+/* 终端头部 */
+.terminal-header {
+    margin-bottom: 24px;
+    align-items: center;
+}
+
+.terminal-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.terminal-header .page-title {
+    font-size: 28px;
+    margin-bottom: 0;
+}
+
+.terminal-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    background: var(--surface-glass);
+    border: 1px solid var(--border-glass);
+    border-radius: 12px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+/* 终端容器 */
+.terminal-container {
+    display: flex;
+    gap: 16px;
+    height: calc(100vh - 180px);
+}
+
+/* 终端主体 */
+.terminal-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: var(--surface-glass);
+    backdrop-filter: blur(var(--blur-glass));
+    border-radius: 16px;
+    border: 1px solid var(--border-glass);
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.terminal-main:hover {
+    box-shadow: var(--shadow-lg);
+}
+
+/* 终端输出区域 */
+.terminal-output {
+    flex: 1;
+    padding: 24px;
+    overflow-y: auto;
+    font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.8;
+    background: rgba(0, 0, 0, 0.2);
+}
+
+/* 终端行 */
+.terminal-line {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 8px;
+    animation: terminalLineSlide 0.3s ease-out;
+}
+
+@keyframes terminalLineSlide {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.terminal-line.welcome-message {
+    color: var(--accent-light);
+    font-weight: 600;
+}
+
+/* 终端提示符 */
+.terminal-prompt {
+    color: var(--accent);
+    font-weight: 700;
+    margin-right: 12px;
+    flex-shrink: 0;
+    user-select: none;
+}
+
+/* 终端文本 */
+.terminal-text {
+    color: var(--text-primary);
+    flex: 1;
+    word-wrap: break-word;
+}
+
+/* 命令文本（用户输入） */
+.terminal-command {
+    color: var(--accent-light);
+    font-weight: 500;
+}
+
+/* 输出文本（命令结果） */
+.terminal-result {
+    color: var(--text-secondary);
+    margin-left: 32px;
+    white-space: pre-wrap;
+    font-family: inherit;
+}
+
+.terminal-result.success {
+    color: var(--success);
+}
+
+.terminal-result.error {
+    color: var(--danger);
+}
+
+.terminal-result.warning {
+    color: var(--warning);
+}
+
+/* 命令高亮 */
+.command-highlight {
+    color: var(--accent-light);
+    background: rgba(99, 102, 241, 0.15);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+}
+
+/* 打字机光标效果 */
+.typing-cursor {
+    display: inline-block;
+    width: 8px;
+    height: 16px;
+    background: var(--accent);
+    margin-left: 2px;
+    animation: blink 1s infinite;
+}
+
+@keyframes blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
+}
+
+/* 终端输入区域 */
+.terminal-input-area {
+    display: flex;
+    align-items: center;
+    padding: 20px 24px;
+    border-top: 1px solid var(--border-glass);
+    background: rgba(0, 0, 0, 0.3);
+}
+
+.terminal-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+    font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+    font-size: 14px;
+    outline: none;
+    padding: 0;
+    margin-left: 12px;
+}
+
+.terminal-input::placeholder {
+    color: var(--text-tertiary);
+    opacity: 0.6;
+}
+
+/* 命令历史面板 */
+.terminal-history-panel {
+    width: 320px;
+    background: var(--surface-glass);
+    backdrop-filter: blur(var(--blur-glass));
+    border-radius: 16px;
+    border: 1px solid var(--border-glass);
+    box-shadow: var(--shadow-md);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.terminal-history-panel.hidden {
+    opacity: 0;
+    transform: translateX(100%);
+    pointer-events: none;
+    width: 0;
+    margin-left: -16px;
+}
+
+/* 历史记录头部 */
+.history-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border-glass);
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.history-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+/* 历史记录列表 */
+.history-list {
+    flex: 1;
+    padding: 16px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* 历史记录空状态 */
+.history-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text-tertiary);
+    gap: 12px;
+}
+
+.history-empty p {
+    font-size: 14px;
+    opacity: 0.7;
+}
+
+/* 历史记录项 */
+.history-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-glass);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    animation: historyItemSlide 0.3s ease-out;
+}
+
+@keyframes historyItemSlide {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.history-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: var(--border-glass-strong);
+    transform: translateX(-4px);
+}
+
+.history-item:active {
+    transform: translateX(-2px);
+}
+
+/* 历史记录内容 */
+.history-item-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.history-command {
+    font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+    font-size: 13px;
+    color: var(--text-primary);
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-bottom: 4px;
+}
+
+.history-time {
+    font-size: 11px;
+    color: var(--text-tertiary);
+}
+
+/* 历史记录次数标记 */
+.history-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    height: 24px;
+    padding: 0 8px;
+    background: rgba(99, 102, 241, 0.15);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    border-radius: 12px;
+    color: var(--accent-light);
+    font-size: 11px;
+    font-weight: 600;
+    margin-left: 8px;
+}
+
+/* 响应式设计 */
+@media (max-width: 1024px) {
+    .terminal-history-panel {
+        position: fixed;
+        right: 0;
+        top: 0;
+        height: 100vh;
+        z-index: 100;
+        border-radius: 0;
+    }
+
+    .terminal-history-panel.hidden {
+        transform: translateX(100%);
+        width: 320px;
+    }
+}
+
+@media (max-width: 768px) {
+    .terminal-container {
+        height: calc(100vh - 140px);
+    }
+
+    .terminal-header .page-title {
+        font-size: 24px;
+    }
+
+    .terminal-output {
+        padding: 16px;
+        font-size: 13px;
+    }
+
+    .terminal-input-area {
+        padding: 16px;
+    }
+
+    .terminal-history-panel {
+        width: 100%;
+        max-width: 320px;
+    }
+
+    .history-header {
+        padding: 16px 20px;
+    }
+
+    .history-list {
+        padding: 12px;
+    }
+}
+
+/* 滚动条样式 */
+.terminal-output::-webkit-scrollbar,
+.history-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+.terminal-output::-webkit-scrollbar-track,
+.history-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.terminal-output::-webkit-scrollbar-thumb,
+.history-list::-webkit-scrollbar-thumb {
+    background: var(--surface-glass);
+    border-radius: 4px;
+}
+
+.terminal-output::-webkit-scrollbar-thumb:hover,
+.history-list::-webkit-scrollbar-thumb:hover {
+    background: var(--surface-glass-hover);
+}
+
+/* 特殊命令输出样式 */
+.terminal-table {
+    margin: 8px 0 8px 32px;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.terminal-table th,
+.terminal-table td {
+    padding: 6px 12px;
+    text-align: left;
+    border: 1px solid var(--border-glass);
+}
+
+.terminal-table th {
+    background: rgba(99, 102, 241, 0.1);
+    color: var(--accent-light);
+    font-weight: 600;
+}
+
+.terminal-table td {
+    color: var(--text-secondary);
+}
+
+.terminal-table tr:hover td {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+/* 命令帮助列表 */
+.command-help-list {
+    margin: 8px 0 8px 32px;
+}
+
+.command-help-item {
+    margin-bottom: 8px;
+    display: flex;
+    gap: 16px;
+}
+
+.command-help-name {
+    color: var(--accent-light);
+    font-weight: 600;
+    min-width: 120px;
+}
+
+.command-help-desc {
+    color: var(--text-secondary);
+}

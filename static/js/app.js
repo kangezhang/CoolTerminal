@@ -2,7 +2,7 @@
 
 // 全局状态
 const AppState = {
-    currentTab: 'ai-chat',
+    currentTab: 'terminal',
     config: {
         port: 5001,
         remote_url: ''
@@ -19,6 +19,7 @@ function switchTab(tab) {
 
     event.target.closest('.nav-item').classList.add('active');
 
+    document.getElementById('terminal-tab').classList.toggle('hidden', tab !== 'terminal');
     document.getElementById('ai-chat-tab').classList.toggle('hidden', tab !== 'ai-chat');
     document.getElementById('chat-tab').classList.toggle('hidden', tab !== 'chat');
     document.getElementById('device-tab').classList.toggle('hidden', tab !== 'device');
@@ -72,6 +73,17 @@ function switchTab(tab) {
         if (typeof AIChatManager !== 'undefined' && AIChatManager.interval) {
             clearInterval(AIChatManager.interval);
             AIChatManager.interval = null;
+        }
+    }
+
+    // 终端tab初始化
+    if (tab === 'terminal') {
+        if (typeof TerminalManager !== 'undefined') {
+            // 聚焦输入框
+            const input = document.getElementById('terminalInput');
+            if (input) {
+                setTimeout(() => input.focus(), 100);
+            }
         }
     }
 }
@@ -184,6 +196,11 @@ window.onload = async function() {
         ConnectionManager.updateStatus();
     } catch (e) {
         console.error('加载配置失败:', e);
+    }
+
+    // 初始化终端
+    if (typeof TerminalManager !== 'undefined') {
+        TerminalManager.init();
     }
 
     // 初始化聊天输入法监听

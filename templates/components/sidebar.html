@@ -1,8 +1,8 @@
 <aside class="sidebar">
     <div class="brand">
-        <div class="brand-icon">S</div>
+        <div class="brand-icon">CT</div>
         <div class="brand-text">
-            <div class="brand-name">Sync Chat</div>
+            <div class="brand-name">CoolTerminal</div>
             <div class="brand-version">v{{ version }}</div>
         </div>
     </div>
@@ -10,9 +10,13 @@
     {% include 'components/connection_status.html' %}
 
     <nav class="nav-section">
+        <button class="nav-item {% if active_tab == 'terminal' %}active{% endif %}" onclick="switchTab('terminal')">
+            <i data-feather="terminal" class="nav-icon"></i>
+            <span>终端</span>
+        </button>
         <button class="nav-item {% if active_tab == 'ai-chat' %}active{% endif %}" onclick="switchTab('ai-chat')">
             <i data-feather="cpu" class="nav-icon"></i>
-            <span>AI 聊天</span>
+            <span>AI 助手</span>
         </button>
         <button class="nav-item {% if active_tab == 'chat' %}active{% endif %}" onclick="switchTab('chat')">
             <i data-feather="message-circle" class="nav-icon"></i>
