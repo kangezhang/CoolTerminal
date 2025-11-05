@@ -417,7 +417,8 @@ def main():
         app.run(
             host='0.0.0.0',
             port=port,
-            debug=not electron_mode,  # Electron 模式下禁用 debug
+            debug=False,  # 禁用 debug 模式加快启动
+            use_reloader=False,  # 禁用自动重载
             threaded=True
         )
     except KeyboardInterrupt:

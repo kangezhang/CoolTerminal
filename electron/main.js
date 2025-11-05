@@ -22,7 +22,7 @@ function getResourcePath(relativePath) {
 }
 
 // 健康检查：检查服务器是否真的可以响应
-function checkServerHealth(maxRetries = 20, delayMs = 500) {
+function checkServerHealth(maxRetries = 10, delayMs = 300) {
   return new Promise((resolve, reject) => {
     let retries = 0;
 
@@ -40,7 +40,7 @@ function checkServerHealth(maxRetries = 20, delayMs = 500) {
         retry();
       });
 
-      req.setTimeout(1000, () => {
+      req.setTimeout(500, () => {
         req.destroy();
         retry();
       });
@@ -116,15 +116,15 @@ function startPythonServer() {
       pythonProcess = null;
     });
 
-    // 设置超时（30秒）
+    // 设置超时（10秒）
     setTimeout(() => {
       if (!serverStartDetected) {
         console.log('Timeout waiting for server, trying health check anyway...');
-        checkServerHealth(10, 1000)
+        checkServerHealth(5, 500)
           .then(() => resolve())
           .catch(() => reject(new Error('Python server failed to start within timeout')));
       }
-    }, 30000);
+    }, 10000);
   });
 }
 
