@@ -132,6 +132,8 @@
                     margin-bottom: 12px;
                     font-size: 14px;
                     line-height: 1.6;
+                    user-select: text;
+                    cursor: text;
                 }
 
                 .coolterminal-line {
@@ -142,16 +144,19 @@
                     color: #4EC9B0;
                     margin-right: 8px;
                     font-weight: bold;
+                    user-select: none;
                 }
 
                 .coolterminal-command {
                     color: #CE9178;
+                    user-select: text;
                 }
 
                 .coolterminal-result {
                     display: inline-block;
                     white-space: pre-wrap;
                     word-break: break-all;
+                    user-select: text;
                 }
 
                 .coolterminal-result.success {
@@ -207,6 +212,17 @@
 
                 .coolterminal-output::-webkit-scrollbar-thumb:hover {
                     background: rgba(255, 255, 255, 0.3);
+                }
+
+                /* 文本选中样式 */
+                .coolterminal-output ::selection {
+                    background: rgba(78, 201, 176, 0.4);
+                    color: #ffffff;
+                }
+
+                .coolterminal-output ::-moz-selection {
+                    background: rgba(78, 201, 176, 0.4);
+                    color: #ffffff;
                 }
             `;
 

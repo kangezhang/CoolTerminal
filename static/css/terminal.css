@@ -62,6 +62,8 @@
     font-size: 14px;
     line-height: 1.8;
     background: rgba(0, 0, 0, 0.2);
+    user-select: text;
+    cursor: text;
 }
 
 /* 终端行 */
@@ -102,12 +104,14 @@
     color: var(--text-primary);
     flex: 1;
     word-wrap: break-word;
+    user-select: text;
 }
 
 /* 命令文本（用户输入） */
 .terminal-command {
     color: var(--accent-light);
     font-weight: 500;
+    user-select: text;
 }
 
 /* 输出文本（命令结果） */
@@ -116,6 +120,7 @@
     margin-left: 32px;
     white-space: pre-wrap;
     font-family: inherit;
+    user-select: text;
 }
 
 .terminal-result.success {
@@ -128,6 +133,17 @@
 
 .terminal-result.warning {
     color: var(--warning);
+}
+
+/* 文本选中样式 */
+.terminal-output ::selection {
+    background: rgba(99, 102, 241, 0.4);
+    color: var(--text-primary);
+}
+
+.terminal-output ::-moz-selection {
+    background: rgba(99, 102, 241, 0.4);
+    color: var(--text-primary);
 }
 
 /* 命令高亮 */
