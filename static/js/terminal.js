@@ -33,7 +33,7 @@ class Terminal {
     addCommandLine(command) {
         this.outputHtml += `
             <div class="terminal-line">
-                <span class="terminal-prompt">$</span>
+                <span class="terminal-prompt">></span>
                 <span class="terminal-command">${this.escapeHtml(command)}</span>
             </div>
         `;
@@ -236,11 +236,11 @@ const TerminalManager = {
         // 添加欢迎消息（每次都是新的，不持久化）
         terminal.outputHtml = `
             <div class="terminal-line welcome-message">
-                <span class="terminal-prompt">$</span>
+                <span class="terminal-prompt">></span>
                 <span class="terminal-text">欢迎使用 CoolTerminal - 现代化终端模拟器</span>
             </div>
             <div class="terminal-line">
-                <span class="terminal-prompt">$</span>
+                <span class="terminal-prompt">></span>
                 <span class="terminal-text">输入命令执行，或查看右上角的命令参考手册</span>
             </div>
         `;

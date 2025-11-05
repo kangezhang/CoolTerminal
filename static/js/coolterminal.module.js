@@ -23,7 +23,7 @@
                 autoFocus: options.autoFocus !== false,
                 showWelcome: options.showWelcome !== false,
                 welcomeMessage: options.welcomeMessage || '欢迎使用 CoolTerminal',
-                prompt: options.prompt || '$',
+                prompt: options.prompt || '>',
                 ...options
             };
 
@@ -148,7 +148,7 @@
                 }
 
                 .coolterminal-command {
-                    color: #CE9178;
+                    color: #00ff41;
                     user-select: text;
                 }
 
@@ -157,10 +157,11 @@
                     white-space: pre-wrap;
                     word-break: break-all;
                     user-select: text;
+                    color: rgba(0, 255, 65, 0.7);
                 }
 
                 .coolterminal-result.success {
-                    color: #6A9955;
+                    color: rgba(0, 255, 65, 0.7);
                 }
 
                 .coolterminal-result.error {

@@ -109,14 +109,14 @@
 
 /* 命令文本（用户输入） */
 .terminal-command {
-    color: var(--accent-light);
+    color: #00ff41;
     font-weight: 500;
     user-select: text;
 }
 
 /* 输出文本（命令结果） */
 .terminal-result {
-    color: var(--text-secondary);
+    color: rgba(0, 255, 65, 0.7);
     margin-left: 32px;
     white-space: pre-wrap;
     font-family: inherit;
@@ -124,7 +124,7 @@
 }
 
 .terminal-result.success {
-    color: var(--success);
+    color: rgba(0, 255, 65, 0.7);
 }
 
 .terminal-result.error {
