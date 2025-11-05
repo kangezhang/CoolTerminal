@@ -211,7 +211,15 @@ const TerminalManager = {
         // 点击终端区域自动聚焦输入框
         const terminalMain = document.getElementById('terminalMain');
         if (terminalMain) {
-            terminalMain.addEventListener('click', () => {
+            terminalMain.addEventListener('click', (e) => {
+                // 检查是否有文本被选中
+                const selection = window.getSelection();
+                if (selection && selection.toString().length > 0) {
+                    // 有文本被选中，不聚焦输入框（保持选择）
+                    return;
+                }
+
+                // 没有选中文本，聚焦输入框
                 input.focus();
             });
         }
