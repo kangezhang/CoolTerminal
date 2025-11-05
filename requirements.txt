@@ -1,0 +1,14 @@
+# CoolTerminal Python 依赖
+
+# Web 框架
+Flask==3.0.0
+Flask-CORS==4.0.0
+
+# 系统信息（可选，用于增强 sysinfo 命令）
+psutil==5.9.6
+
+# Werkzeug（Flask 依赖）
+Werkzeug==3.0.1
+
+# 其他常用工具
+python-dateutil==2.8.2

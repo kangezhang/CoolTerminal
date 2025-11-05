@@ -6,6 +6,7 @@ const TerminalManager = {
     commandHistory: [], // 用于上下键导航的完整历史
     isTyping: false, // 是否正在打字
     typingSpeed: 20, // 打字速度（毫秒）
+    useRealCommands: false, // 是否使用真实命令（默认模拟）
 
     init() {
         const input = document.getElementById('terminalInput');
@@ -90,6 +91,13 @@ const TerminalManager = {
 
     // 运行命令
     async runCommand(command) {
+        // 如果启用真实命令模式，调用后端 API
+        if (this.useRealCommands) {
+            await this.executeRealCommand(command);
+            return;
+        }
+
+        // 否则使用模拟命令
         const [cmd, ...args] = command.split(' ');
         const cmdLower = cmd.toLowerCase();
 
@@ -116,6 +124,72 @@ const TerminalManager = {
         } else {
             await this.cmdNotFound(cmd);
         }
+    },
+
+    // 执行真实命令（调用后端 API）
+    async executeRealCommand(command) {
+        try {
+            this.isTyping = true;
+            const response = await fetch('/api/terminal/execute', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ command: command })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // 显示命令输出
+                const output = data.output || '命令执行成功（无输出）';
+                const className = data.exit_code === 0 ? 'success' : 'warning';
+                await this.typeOutput(output, className);
+            } else {
+                // 显示错误
+                await this.typeOutput(data.output || data.error, 'error');
+            }
+        } catch (error) {
+            await this.typeOutput(`连接错误: ${error.message}`, 'error');
+            await this.typeOutput('提示：请确保 Python 后端正在运行');
+        } finally {
+            this.isTyping = false;
+        }
+    },
+
+    // 切换命令模式（模拟 / 真实）
+    toggleMode() {
+        this.useRealCommands = !this.useRealCommands;
+
+        // 更新 UI
+        const modeBadge = document.getElementById('terminalModeBadge');
+        const modeToggleText = document.getElementById('modeToggleText');
+        const modeToggleBtn = document.getElementById('modeToggleBtn');
+
+        if (this.useRealCommands) {
+            modeBadge.textContent = '真实模式';
+            modeBadge.style.background = 'linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(16, 185, 129, 0.1))';
+            modeBadge.style.borderColor = 'rgba(34, 197, 94, 0.3)';
+            modeBadge.style.color = 'var(--success)';
+            modeToggleText.textContent = '切换到模拟模式';
+            modeToggleBtn.querySelector('i').setAttribute('data-feather', 'toggle-right');
+        } else {
+            modeBadge.textContent = '模拟模式';
+            modeBadge.style.background = 'var(--surface-glass)';
+            modeBadge.style.borderColor = 'var(--border-glass)';
+            modeBadge.style.color = 'var(--text-secondary)';
+            modeToggleText.textContent = '切换到真实模式';
+            modeToggleBtn.querySelector('i').setAttribute('data-feather', 'toggle-left');
+        }
+
+        // 重新渲染图标
+        if (typeof feather !== 'undefined') {
+            feather.replace();
+        }
+
+        // 显示提示
+        const modeText = this.useRealCommands ? '真实命令' : '模拟命令';
+        this.addOutput(`已切换到 ${modeText} 模式`, 'success');
     },
 
     // 打字机效果输出
