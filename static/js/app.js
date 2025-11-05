@@ -40,7 +40,7 @@ Made with ❤️ by CoolTerminal Team
 function openCommandReference() {
     const modal = document.getElementById('commandReferenceModal');
     if (modal) {
-        modal.classList.add('show');
+        modal.classList.add('active');
 
         // 替换 Feather 图标
         if (typeof feather !== 'undefined') {
@@ -52,9 +52,16 @@ function openCommandReference() {
 function closeCommandReference() {
     const modal = document.getElementById('commandReferenceModal');
     if (modal) {
-        modal.classList.remove('show');
+        modal.classList.remove('active');
     }
 }
+
+// 点击模态框外部区域关闭
+document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('modal-overlay')) {
+        closeCommandReference();
+    }
+});
 
 function switchPlatformTab(platform) {
     // 移除所有标签的活动状态
