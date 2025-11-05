@@ -453,18 +453,16 @@ const TerminalManager = {
         tabsList.innerHTML = this.terminals.map(terminal => {
             const isActive = terminal.id === this.currentTerminalId;
             return `
-                <button class="terminal-tab-item ${isActive ? 'active' : ''}"
-                        onclick="TerminalManager.switchTerminal(${terminal.id})">
-                    <div class="terminal-tab-icon">
-                        <i data-feather="terminal"></i>
-                    </div>
+                <div class="terminal-tab-item ${isActive ? 'active' : ''}"
+                     onclick="TerminalManager.switchTerminal(${terminal.id})">
+                    <i data-feather="terminal" class="terminal-tab-icon"></i>
                     <span class="terminal-tab-name">${terminal.name}</span>
                     <button class="terminal-tab-close"
                             onclick="event.stopPropagation(); TerminalManager.closeTerminal(${terminal.id})"
                             title="关闭终端">
                         <i data-feather="x"></i>
                     </button>
-                </button>
+                </div>
             `;
         }).join('');
 

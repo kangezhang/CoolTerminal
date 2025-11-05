@@ -87,9 +87,45 @@ function switchPlatformTab(platform) {
     }
 }
 
+// Sidebar 收缩/展开
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const body = document.body;
+
+    if (sidebar && body) {
+        sidebar.classList.toggle('collapsed');
+        body.classList.toggle('sidebar-collapsed');
+
+        // 保存状态到 localStorage
+        const isCollapsed = sidebar.classList.contains('collapsed');
+        localStorage.setItem('sidebar-collapsed', isCollapsed);
+
+        // 重新渲染 Feather 图标
+        if (typeof feather !== 'undefined') {
+            feather.replace();
+        }
+    }
+}
+
+// 加载 sidebar 状态
+function loadSidebarState() {
+    const isCollapsed = localStorage.getItem('sidebar-collapsed') === 'true';
+    if (isCollapsed) {
+        const sidebar = document.getElementById('sidebar');
+        const body = document.body;
+        if (sidebar && body) {
+            sidebar.classList.add('collapsed');
+            body.classList.add('sidebar-collapsed');
+        }
+    }
+}
+
 // 初始化
 window.onload = async function() {
     console.log('CoolTerminal 初始化...');
+
+    // 加载 sidebar 状态
+    loadSidebarState();
 
     // 初始化终端
     if (typeof TerminalManager !== 'undefined') {

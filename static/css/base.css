@@ -98,6 +98,11 @@ body {
     flex: 1;
     margin-left: 240px;
     padding: 40px;
+    transition: margin-left 0.3s ease;
+}
+
+body.sidebar-collapsed .main-content {
+    margin-left: 70px;
 }
 
 .hidden {
