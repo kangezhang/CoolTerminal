@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CoolTerminal - 基础示例</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 900px;
+            padding: 30px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .description {
+            color: #666;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            background: #667eea;
+            color: white;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        #terminal-container {
+            height: 500px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .info {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f0f4ff;
+            border-radius: 8px;
+            font-size: 13px;
+            color: #555;
+        }
+
+        .info code {
+            background: #e0e7ff;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 CoolTerminal 基础示例</h1>
+        <p class="description">这是一个简单的集成示例，展示如何在 HTML 页面中使用 CoolTerminal 模块</p>
+
+        <div class="controls">
+            <button onclick="runLs()">📁 执行 ls</button>
+            <button onclick="runPwd()">📍 执行 pwd</button>
+            <button onclick="runDate()">📅 执行 date</button>
+            <button onclick="clearTerminal()">🗑️ 清空</button>
+            <button onclick="showInfo()">ℹ️ 显示信息</button>
+        </div>
+
+        <div id="terminal-container"></div>
+
+        <div class="info">
+            <strong>💡 提示：</strong><br>
+            • 直接在终端中输入命令并按 <code>Enter</code> 执行<br>
+            • 使用 <code>↑</code> <code>↓</code> 箭头键浏览命令历史<br>
+            • 点击上方按钮快速执行常用命令
+        </div>
+    </div>
+
+    <!-- 引入 CoolTerminal 模块 -->
+    <script src="../static/js/coolterminal.module.js"></script>
+
+    <script>
+        // 创建终端实例
+        const terminal = CoolTerminal.create({
+            container: '#terminal-container',
+            theme: 'dark',
+            apiEndpoint: 'http://localhost:5000/api/terminal/execute',
+            welcomeMessage: '欢迎使用 CoolTerminal！\n这是一个可嵌入任意项目的终端模块。\n\n输入命令开始体验...',
+            typingSpeed: 15
+        });
+
+        // 监听终端事件
+        terminal.on('ready', () => {
+            console.log('✅ 终端已就绪');
+        });
+
+        terminal.on('command', (data) => {
+            console.log('📤 执行命令:', data.command);
+        });
+
+        terminal.on('output', (data) => {
+            console.log('📥 命令输出:', data.output);
+            console.log('📊 退出代码:', data.exitCode);
+        });
+
+        terminal.on('error', (data) => {
+            console.error('❌ 执行错误:', data.error);
+        });
+
+        // 快捷命令函数
+        function runLs() {
+            terminal.execute('ls -la');
+        }
+
+        function runPwd() {
+            terminal.execute('pwd');
+        }
+
+        function runDate() {
+            terminal.execute('date');
+        }
+
+        function clearTerminal() {
+            terminal.clear();
+        }
+
+        function showInfo() {
+            terminal.writeOutput('=== CoolTerminal 信息 ===', 'info');
+            terminal.writeOutput(`版本: ${CoolTerminal.version}`, 'success');
+            terminal.writeOutput(`实例 ID: ${terminal.id}`, 'success');
+            terminal.writeOutput(`主题: ${terminal.options.theme}`, 'success');
+            terminal.writeOutput(`历史记录: ${terminal.commandHistory.length} 条`, 'success');
+        }
+    </script>
+</body>
+</html>
