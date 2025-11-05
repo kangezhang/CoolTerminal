@@ -1,0 +1,39 @@
+<aside class="sidebar">
+    <div class="brand">
+        <div class="brand-icon">S</div>
+        <div class="brand-text">
+            <div class="brand-name">Sync Chat</div>
+            <div class="brand-version">v{{ version }}</div>
+        </div>
+    </div>
+
+    {% include 'components/connection_status.html' %}
+
+    <nav class="nav-section">
+        <button class="nav-item {% if active_tab == 'ai-chat' %}active{% endif %}" onclick="switchTab('ai-chat')">
+            <i data-feather="cpu" class="nav-icon"></i>
+            <span>AI 聊天</span>
+        </button>
+        <button class="nav-item {% if active_tab == 'chat' %}active{% endif %}" onclick="switchTab('chat')">
+            <i data-feather="message-circle" class="nav-icon"></i>
+            <span>聊天</span>
+        </button>
+        <button class="nav-item {% if active_tab == 'device' %}active{% endif %}" onclick="switchTab('device')">
+            <i data-feather="smartphone" class="nav-icon"></i>
+            <span>设备管理</span>
+        </button>
+    </nav>
+
+    <div class="sidebar-footer">
+        <div class="tool-section">
+            <button class="tool-btn" onclick="openSettings()">
+                <i data-feather="settings" class="tool-icon"></i>
+                <span>设置</span>
+            </button>
+            <button class="tool-btn" onclick="openAbout()">
+                <i data-feather="info" class="tool-icon"></i>
+                <span>关于</span>
+            </button>
+        </div>
+    </div>
+</aside>

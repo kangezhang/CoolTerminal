@@ -1,0 +1,32 @@
+<div class="modal-overlay" id="settingsModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 class="modal-title">基础设置</h3>
+            <button class="modal-close" onclick="closeSettings()">✕</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label class="form-label">本机端口</label>
+                <input type="number" class="form-input" id="settingsPort" value="5001">
+                <small style="font-size: 11px; color: var(--text-tertiary); margin-top: 4px; display: block;">
+                    本机服务监听的端口号，修改后需重启服务
+                </small>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">聊天记录管理</label>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px;">
+                    <button class="btn-clear-chat" onclick="clearChatHistory(7)">清除7天前</button>
+                    <button class="btn-clear-chat" onclick="clearChatHistory(30)">清除30天前</button>
+                    <button class="btn-clear-chat btn-clear-all" onclick="clearChatHistory(0)">清除全部</button>
+                </div>
+                <small style="font-size: 11px; color: var(--text-tertiary); margin-top: 8px; display: block;">
+                    ⚠️ 清除操作不可恢复，请谨慎操作
+                </small>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-primary" onclick="saveSettings()">保存</button>
+        </div>
+    </div>
+</div>

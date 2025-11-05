@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Sync Chat - 主页{% endblock %}
+
+{% block content %}
+    <div id="ai-chat-tab" class="tab-content">
+        {% include 'pages/ai_chat_tab.html' %}
+    </div>
+
+    <div id="chat-tab" class="tab-content hidden">
+        {% include 'pages/chat_tab.html' %}
+    </div>
+
+    <div id="device-tab" class="tab-content hidden">
+        {% include 'pages/device_tab.html' %}
+    </div>
+
+    <!-- AI 设置模态框 -->
+    {% include 'components/ai_settings_modal.html' %}
+
+    <!-- AI 聊天记录模态框 -->
+    {% include 'components/ai_history_modal.html' %}
+{% endblock %}
+
+{% block extra_js %}
+    <!-- Markdown 和代码高亮库 -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@11.0.0/marked.min.js"></script>
+    <!-- 使用完整版 highlight.js，包含常用语言 -->
+    <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/lib/highlight.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/atom-one-dark.min.css">
+
+    <script src="{{ url_for('static', filename='js/chat.js') }}?v=4.3.1"></script>
+    <script src="{{ url_for('static', filename='js/device.js') }}?v=4.3.1"></script>
+    <script src="{{ url_for('static', filename='js/ai_chat.js') }}?v=4.3.1"></script>
+{% endblock %}

@@ -1,0 +1,94 @@
+<!-- AI 设置模态框 -->
+<div class="modal-overlay" id="aiSettingsModal">
+    <div class="modal" style="max-width: 600px;">
+        <div class="modal-header">
+            <h3 class="modal-title">AI 聊天设置</h3>
+            <button class="modal-close" onclick="AIChatManager.closeSettings()">✕</button>
+        </div>
+
+        <div class="modal-body">
+            <form id="aiSettingsForm">
+                <!-- AI 提供商 -->
+                <div class="form-group">
+                    <label class="form-label">AI 提供商</label>
+                    <select id="aiProvider" class="form-input" disabled>
+                        <option value="openai" disabled>OpenAI (ChatGPT) - 暂未开放</option>
+                        <option value="anthropic" disabled>Anthropic (Claude) - 暂未开放</option>
+                        <option value="gemini" selected>Google (Gemini)</option>
+                        <option value="custom" disabled>自定义 API - 暂未开放</option>
+                    </select>
+                    <small class="form-hint">
+                        当前仅支持 Gemini，其他提供商敬请期待
+                    </small>
+                </div>
+
+                <!-- API 端点 -->
+                <div class="form-group">
+                    <label class="form-label">API 端点</label>
+                    <input type="text" id="aiApiBase" class="form-input" placeholder="https://generativelanguage.googleapis.com/v1beta">
+                    <small class="form-hint">
+                        支持官方端点或第三方中转服务
+                    </small>
+                </div>
+
+                <!-- API 密钥 -->
+                <div class="form-group">
+                    <label class="form-label">API 密钥</label>
+                    <div style="position: relative;">
+                        <input type="password" id="aiApiKey" class="form-input" placeholder="输入你的 API 密钥">
+                        <button type="button" class="btn-icon" onclick="AIChatManager.toggleApiKeyVisibility()"
+                                style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%);">
+                            <i data-feather="eye" id="apiKeyToggleIcon"></i>
+                        </button>
+                    </div>
+                    <small class="form-hint">
+                        你的 API 密钥将安全地存储在本地
+                    </small>
+                </div>
+
+                <!-- 模型选择 -->
+                <div class="form-group">
+                    <label class="form-label">模型</label>
+                    <select id="aiModel" class="form-input">
+                        <option value="gemini-2.5-flash" selected>Gemini 2.5 Flash</option>
+                        <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite</option>
+                        <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+                    </select>
+                    <small class="form-hint">
+                        推荐使用 Gemini 2.5 Flash（平衡性能与成本）
+                    </small>
+                </div>
+
+                <div class="form-row">
+                    <!-- 最大 Token 数 -->
+                    <div class="form-group" style="flex: 1;">
+                        <label class="form-label">最大 Token 数</label>
+                        <input type="number" id="aiMaxTokens" class="form-input" value="2000" min="100" max="128000" step="100">
+                        <small class="form-hint">控制回复长度</small>
+                    </div>
+
+                    <!-- 温度 -->
+                    <div class="form-group" style="flex: 1; margin-left: 12px;">
+                        <label class="form-label">温度 (Temperature)</label>
+                        <input type="number" id="aiTemperature" class="form-input" value="0.7" min="0" max="2" step="0.1">
+                        <small class="form-hint">控制创造性 (0-2)</small>
+                    </div>
+                </div>
+
+                <!-- 历史消息数量 -->
+                <div class="form-group">
+                    <label class="form-label">历史消息数量</label>
+                    <input type="number" id="aiMaxHistory" class="form-input" value="20" min="1" max="100" step="1">
+                    <small class="form-hint">
+                        包含在上下文中的历史消息数量
+                    </small>
+                </div>
+            </form>
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="AIChatManager.closeSettings()">取消</button>
+            <button class="btn btn-primary" onclick="AIChatManager.saveSettings()">保存设置</button>
+        </div>
+    </div>
+</div>
