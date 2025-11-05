@@ -7,12 +7,18 @@
         </div>
     </div>
 
-    <nav class="nav-section">
-        <button class="nav-item active">
-            <i data-feather="terminal" class="nav-icon"></i>
-            <span>终端</span>
-        </button>
-    </nav>
+    <!-- 终端标签列表 -->
+    <div class="terminal-tabs-section">
+        <div class="terminal-tabs-header">
+            <h3 class="terminal-tabs-title">终端</h3>
+            <button class="btn-new-terminal" onclick="TerminalManager.createNewTerminal()" title="新建终端">
+                <i data-feather="plus"></i>
+            </button>
+        </div>
+        <div class="terminal-tabs-list" id="terminalTabsList">
+            <!-- 终端标签将通过 JavaScript 动态添加 -->
+        </div>
+    </div>
 
     <div class="sidebar-footer">
         <div class="tool-section">
