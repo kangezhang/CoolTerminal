@@ -5,15 +5,10 @@ class Terminal {
     constructor(id, name) {
         this.id = id;
         this.name = name;
-        this.historyCommands = []; // 命令历史（最多50条，不重复）
         this.historyIndex = -1; // 当前历史索引（用于上下键导航）
-        this.commandHistory = []; // 用于上下键导航的完整历史
         this.isTyping = false; // 是否正在打字
         this.typingSpeed = 20; // 打字速度（毫秒）
-        this.outputHtml = ''; // 终端输出的 HTML
-
-        // 加载历史
-        this.loadHistory();
+        this.outputHtml = ''; // 终端输出的 HTML（不持久化）
     }
 
     // 执行命令
@@ -24,8 +19,8 @@ class Terminal {
         // 添加命令到输出
         this.addCommandLine(command);
 
-        // 添加到历史记录（不重复）
-        this.addToHistory(command);
+        // 添加到全局历史记录（不重复）
+        TerminalManager.addToGlobalHistory(command);
 
         // 重置历史导航索引
         this.historyIndex = -1;
@@ -116,40 +111,15 @@ class Terminal {
         this.outputHtml = '';
     }
 
-    // 历史记录管理
-    addToHistory(command) {
-        // 检查是否已存在（不重复）
-        const existingIndex = this.historyCommands.indexOf(command);
-        if (existingIndex !== -1) {
-            // 如果已存在，移除旧的
-            this.historyCommands.splice(existingIndex, 1);
-        }
-
-        // 添加到开头
-        this.historyCommands.unshift(command);
-
-        // 限制最多50条
-        if (this.historyCommands.length > 50) {
-            this.historyCommands = this.historyCommands.slice(0, 50);
-        }
-
-        // 同时更新完整历史（用于上下键导航）
-        this.commandHistory.push(command);
-        if (this.commandHistory.length > 100) {
-            this.commandHistory.shift();
-        }
-
-        // 保存到 localStorage
-        this.saveHistory();
-    }
-
+    // 历史导航
     navigateHistory(direction, input) {
-        if (this.commandHistory.length === 0) return;
+        const globalHistory = TerminalManager.getGlobalCommandHistory();
+        if (globalHistory.length === 0) return;
 
         if (direction === 'up') {
             this.historyIndex++;
-            if (this.historyIndex >= this.commandHistory.length) {
-                this.historyIndex = this.commandHistory.length - 1;
+            if (this.historyIndex >= globalHistory.length) {
+                this.historyIndex = globalHistory.length - 1;
             }
         } else if (direction === 'down') {
             this.historyIndex--;
@@ -161,47 +131,8 @@ class Terminal {
         if (this.historyIndex === -1) {
             input.value = '';
         } else {
-            const cmd = this.commandHistory[this.commandHistory.length - 1 - this.historyIndex];
+            const cmd = globalHistory[globalHistory.length - 1 - this.historyIndex];
             input.value = cmd;
-        }
-    }
-
-    clearHistory() {
-        if (!confirm('确定要清空所有命令历史吗？')) {
-            return;
-        }
-
-        this.historyCommands = [];
-        this.commandHistory = [];
-        this.historyIndex = -1;
-        this.saveHistory();
-    }
-
-    // 本地存储
-    saveHistory() {
-        try {
-            localStorage.setItem(`terminal_history_${this.id}`, JSON.stringify(this.historyCommands));
-            localStorage.setItem(`terminal_command_history_${this.id}`, JSON.stringify(this.commandHistory));
-        } catch (e) {
-            console.error('保存历史记录失败:', e);
-        }
-    }
-
-    loadHistory() {
-        try {
-            const history = localStorage.getItem(`terminal_history_${this.id}`);
-            if (history) {
-                this.historyCommands = JSON.parse(history);
-            }
-
-            const commandHistory = localStorage.getItem(`terminal_command_history_${this.id}`);
-            if (commandHistory) {
-                this.commandHistory = JSON.parse(commandHistory);
-            }
-        } catch (e) {
-            console.error('加载历史记录失败:', e);
-            this.historyCommands = [];
-            this.commandHistory = [];
         }
     }
 
@@ -224,10 +155,17 @@ const TerminalManager = {
     nextId: 1, // 下一个终端 ID
     isInitialized: false,
 
+    // 全局命令历史（独立保存，不跟终端实例绑定）
+    globalHistoryCommands: [], // 去重的历史（最多50条）
+    globalCommandHistory: [], // 完整历史（用于上下键导航，最多100条）
+
     // 初始化
     init() {
         if (this.isInitialized) return;
         this.isInitialized = true;
+
+        // 加载全局历史
+        this.loadGlobalHistory();
 
         // 创建第一个终端
         this.createNewTerminal();
@@ -279,7 +217,7 @@ const TerminalManager = {
 
         this.terminals.push(terminal);
 
-        // 添加欢迎消息
+        // 添加欢迎消息（每次都是新的，不持久化）
         terminal.outputHtml = `
             <div class="terminal-line welcome-message">
                 <span class="terminal-prompt">$</span>
@@ -359,7 +297,7 @@ const TerminalManager = {
         // 执行命令
         await terminal.executeCommand(command);
 
-        // 更新输出
+        // 更新输出和历史面板
         this.updateCurrentTerminalOutput();
         this.updateHistoryPanel();
     },
@@ -375,6 +313,95 @@ const TerminalManager = {
         terminal.navigateHistory(direction, input);
     },
 
+    // === 全局历史管理 ===
+
+    // 添加到全局历史
+    addToGlobalHistory(command) {
+        // 检查是否已存在（不重复）
+        const existingIndex = this.globalHistoryCommands.indexOf(command);
+        if (existingIndex !== -1) {
+            // 如果已存在，移除旧的
+            this.globalHistoryCommands.splice(existingIndex, 1);
+        }
+
+        // 添加到开头
+        this.globalHistoryCommands.unshift(command);
+
+        // 限制最多50条
+        if (this.globalHistoryCommands.length > 50) {
+            this.globalHistoryCommands = this.globalHistoryCommands.slice(0, 50);
+        }
+
+        // 同时更新完整历史（用于上下键导航）
+        this.globalCommandHistory.push(command);
+        if (this.globalCommandHistory.length > 100) {
+            this.globalCommandHistory.shift();
+        }
+
+        // 保存到 localStorage
+        this.saveGlobalHistory();
+
+        // 更新历史面板
+        this.updateHistoryPanel();
+    },
+
+    // 获取全局历史命令
+    getGlobalHistoryCommands() {
+        return this.globalHistoryCommands;
+    },
+
+    // 获取全局完整历史（用于上下键）
+    getGlobalCommandHistory() {
+        return this.globalCommandHistory;
+    },
+
+    // 保存全局历史
+    saveGlobalHistory() {
+        try {
+            localStorage.setItem('coolterminal_global_history', JSON.stringify(this.globalHistoryCommands));
+            localStorage.setItem('coolterminal_global_command_history', JSON.stringify(this.globalCommandHistory));
+        } catch (e) {
+            console.error('保存历史记录失败:', e);
+        }
+    },
+
+    // 加载全局历史
+    loadGlobalHistory() {
+        try {
+            const history = localStorage.getItem('coolterminal_global_history');
+            if (history) {
+                this.globalHistoryCommands = JSON.parse(history);
+            }
+
+            const commandHistory = localStorage.getItem('coolterminal_global_command_history');
+            if (commandHistory) {
+                this.globalCommandHistory = JSON.parse(commandHistory);
+            }
+        } catch (e) {
+            console.error('加载历史记录失败:', e);
+            this.globalHistoryCommands = [];
+            this.globalCommandHistory = [];
+        }
+    },
+
+    // 清空全局历史
+    clearGlobalHistory() {
+        if (!confirm('确定要清空所有命令历史吗？')) {
+            return;
+        }
+
+        this.globalHistoryCommands = [];
+        this.globalCommandHistory = [];
+
+        // 重置所有终端的历史索引
+        this.terminals.forEach(t => t.historyIndex = -1);
+
+        this.saveGlobalHistory();
+        this.updateHistoryPanel();
+    },
+
+    // === UI 更新 ===
+
     // 更新当前终端输出
     updateCurrentTerminalOutput() {
         const terminal = this.getCurrentTerminal();
@@ -389,13 +416,10 @@ const TerminalManager = {
 
     // 更新历史面板
     updateHistoryPanel() {
-        const terminal = this.getCurrentTerminal();
-        if (!terminal) return;
-
         const historyList = document.getElementById('historyList');
         if (!historyList) return;
 
-        if (terminal.historyCommands.length === 0) {
+        if (this.globalHistoryCommands.length === 0) {
             historyList.innerHTML = `
                 <div class="history-empty">
                     <i data-feather="terminal" style="width: 32px; height: 32px; opacity: 0.3;"></i>
@@ -406,12 +430,12 @@ const TerminalManager = {
             return;
         }
 
-        historyList.innerHTML = terminal.historyCommands.map((cmd) => {
-            const escapedCmd = terminal.escapeHtml(cmd).replace(/'/g, "\\'");
+        historyList.innerHTML = this.globalHistoryCommands.map((cmd) => {
+            const escapedCmd = this.escapeHtml(cmd).replace(/'/g, "\\'");
             return `
                 <div class="history-item" onclick="TerminalManager.executeFromHistory('${escapedCmd}')">
                     <div class="history-item-content">
-                        <div class="history-command">${terminal.escapeHtml(cmd)}</div>
+                        <div class="history-command">${this.escapeHtml(cmd)}</div>
                         <div class="history-time">最近使用</div>
                     </div>
                 </div>
@@ -436,7 +460,8 @@ const TerminalManager = {
                     </div>
                     <span class="terminal-tab-name">${terminal.name}</span>
                     <button class="terminal-tab-close"
-                            onclick="event.stopPropagation(); TerminalManager.closeTerminal(${terminal.id})">
+                            onclick="event.stopPropagation(); TerminalManager.closeTerminal(${terminal.id})"
+                            title="关闭终端">
                         <i data-feather="x"></i>
                     </button>
                 </button>
@@ -475,11 +500,7 @@ const TerminalManager = {
 
     // 清空历史
     clearHistory() {
-        const terminal = this.getCurrentTerminal();
-        if (!terminal) return;
-
-        terminal.clearHistory();
-        this.updateHistoryPanel();
+        this.clearGlobalHistory();
     },
 
     // 清空屏幕
@@ -497,5 +518,12 @@ const TerminalManager = {
         if (output) {
             output.scrollTop = output.scrollHeight;
         }
+    },
+
+    // 工具方法
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 };
