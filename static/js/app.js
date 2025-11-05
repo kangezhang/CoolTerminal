@@ -36,6 +36,50 @@ Made with ❤️ by CoolTerminal Team
     `);
 }
 
+// 命令参考手册模态框
+function openCommandReference() {
+    const modal = document.getElementById('commandReferenceModal');
+    if (modal) {
+        modal.classList.add('show');
+
+        // 替换 Feather 图标
+        if (typeof feather !== 'undefined') {
+            feather.replace();
+        }
+    }
+}
+
+function closeCommandReference() {
+    const modal = document.getElementById('commandReferenceModal');
+    if (modal) {
+        modal.classList.remove('show');
+    }
+}
+
+function switchPlatformTab(platform) {
+    // 移除所有标签的活动状态
+    document.querySelectorAll('.platform-tab').forEach(tab => {
+        tab.classList.remove('active');
+    });
+
+    // 隐藏所有内容
+    document.querySelectorAll('.platform-content').forEach(content => {
+        content.classList.remove('active');
+    });
+
+    // 激活选中的标签和内容
+    const selectedTab = document.querySelector(`.platform-tab[onclick*="${platform}"]`);
+    const selectedContent = document.getElementById(`content-${platform}`);
+
+    if (selectedTab) {
+        selectedTab.classList.add('active');
+    }
+
+    if (selectedContent) {
+        selectedContent.classList.add('active');
+    }
+}
+
 // 初始化
 window.onload = async function() {
     console.log('CoolTerminal 初始化...');

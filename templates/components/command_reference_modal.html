@@ -1,0 +1,467 @@
+<!-- 命令参考模态框 -->
+<div class="modal-overlay" id="commandReferenceModal">
+    <div class="modal command-reference-modal">
+        <div class="modal-header">
+            <h2 class="modal-title">📚 命令参考手册</h2>
+            <button class="modal-close" onclick="closeCommandReference()">
+                <i data-feather="x"></i>
+            </button>
+        </div>
+
+        <div class="modal-body">
+            <!-- 平台切换标签 -->
+            <div class="platform-tabs">
+                <button class="platform-tab active" onclick="switchPlatformTab('windows')" id="tab-windows">
+                    <i data-feather="monitor"></i>
+                    <span>Windows</span>
+                </button>
+                <button class="platform-tab" onclick="switchPlatformTab('macos')" id="tab-macos">
+                    <i data-feather="command"></i>
+                    <span>macOS</span>
+                </button>
+                <button class="platform-tab" onclick="switchPlatformTab('linux')" id="tab-linux">
+                    <i data-feather="server"></i>
+                    <span>Linux</span>
+                </button>
+            </div>
+
+            <!-- Windows 命令参考 -->
+            <div class="platform-content active" id="content-windows">
+                <div class="command-category">
+                    <h3 class="category-title">📁 文件和目录</h3>
+                    <div class="command-list">
+                        <div class="command-item">
+                            <code class="command-name">dir</code>
+                            <span class="command-desc">列出目录内容</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">cd [路径]</code>
+                            <span class="command-desc">切换目录</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">mkdir [目录名]</code>
+                            <span class="command-desc">创建目录</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">rmdir [目录名]</code>
+                            <span class="command-desc">删除目录</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">copy [源] [目标]</code>
+                            <span class="command-desc">复制文件</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">move [源] [目标]</code>
+                            <span class="command-desc">移动文件</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">del [文件]</code>
+                            <span class="command-desc">删除文件</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">type [文件]</code>
+                            <span class="command-desc">显示文件内容</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="command-category">
+                    <h3 class="category-title">⚙️ 系统信息</h3>
+                    <div class="command-list">
+                        <div class="command-item">
+                            <code class="command-name">systeminfo</code>
+                            <span class="command-desc">显示系统信息</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">hostname</code>
+                            <span class="command-desc">显示计算机名</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">ver</code>
+                            <span class="command-desc">显示系统版本</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">whoami</code>
+                            <span class="command-desc">显示当前用户</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="command-category">
+                    <h3 class="category-title">🌐 网络</h3>
+                    <div class="command-list">
+                        <div class="command-item">
+                            <code class="command-name">ipconfig</code>
+                            <span class="command-desc">显示IP配置</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">ping [地址]</code>
+                            <span class="command-desc">测试网络连接</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">netstat</code>
+                            <span class="command-desc">显示网络连接</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">tracert [地址]</code>
+                            <span class="command-desc">追踪路由</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="command-category">
+                    <h3 class="category-title">🔧 进程和服务</h3>
+                    <div class="command-list">
+                        <div class="command-item">
+                            <code class="command-name">tasklist</code>
+                            <span class="command-desc">列出所有进程</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">taskkill /PID [进程ID]</code>
+                            <span class="command-desc">终止进程</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">sc query</code>
+                            <span class="command-desc">查询服务状态</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- macOS 命令参考 -->
+            <div class="platform-content" id="content-macos">
+                <div class="command-category">
+                    <h3 class="category-title">📁 文件和目录</h3>
+                    <div class="command-list">
+                        <div class="command-item">
+                            <code class="command-name">ls [-la]</code>
+                            <span class="command-desc">列出目录内容</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">cd [路径]</code>
+                            <span class="command-desc">切换目录</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">pwd</code>
+                            <span class="command-desc">显示当前目录</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">mkdir [目录名]</code>
+                            <span class="command-desc">创建目录</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">rm [-rf] [文件/目录]</code>
+                            <span class="command-desc">删除文件或目录</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">cp [-r] [源] [目标]</code>
+                            <span class="command-desc">复制文件或目录</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">mv [源] [目标]</code>
+                            <span class="command-desc">移动或重命名</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">cat [文件]</code>
+                            <span class="command-desc">显示文件内容</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">find [路径] -name [名称]</code>
+                            <span class="command-desc">查找文件</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="command-category">
+                    <h3 class="category-title">⚙️ 系统信息</h3>
+                    <div class="command-list">
+                        <div class="command-item">
+                            <code class="command-name">uname -a</code>
+                            <span class="command-desc">显示系统信息</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">sw_vers</code>
+                            <span class="command-desc">显示 macOS 版本</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">hostname</code>
+                            <span class="command-desc">显示主机名</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">whoami</code>
+                            <span class="command-desc">显示当前用户</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">df -h</code>
+                            <span class="command-desc">显示磁盘使用情况</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">top</code>
+                            <span class="command-desc">显示进程和资源</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="command-category">
+                    <h3 class="category-title">🌐 网络</h3>
+                    <div class="command-list">
+                        <div class="command-item">
+                            <code class="command-name">ifconfig</code>
+                            <span class="command-desc">显示网络配置</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">ping [地址]</code>
+                            <span class="command-desc">测试网络连接</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">netstat -an</code>
+                            <span class="command-desc">显示网络连接</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">curl [URL]</code>
+                            <span class="command-desc">传输数据</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="command-category">
+                    <h3 class="category-title">🔧 进程和权限</h3>
+                    <div class="command-list">
+                        <div class="command-item">
+                            <code class="command-name">ps aux</code>
+                            <span class="command-desc">列出所有进程</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">kill [PID]</code>
+                            <span class="command-desc">终止进程</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">sudo [命令]</code>
+                            <span class="command-desc">以管理员权限执行</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">chmod [权限] [文件]</code>
+                            <span class="command-desc">修改文件权限</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">chown [用户] [文件]</code>
+                            <span class="command-desc">修改文件所有者</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="command-category">
+                    <h3 class="category-title">📦 Homebrew (包管理)</h3>
+                    <div class="command-list">
+                        <div class="command-item">
+                            <code class="command-name">brew install [包名]</code>
+                            <span class="command-desc">安装软件包</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">brew update</code>
+                            <span class="command-desc">更新 Homebrew</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">brew list</code>
+                            <span class="command-desc">列出已安装的包</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Linux 命令参考 -->
+            <div class="platform-content" id="content-linux">
+                <div class="command-category">
+                    <h3 class="category-title">📁 文件和目录</h3>
+                    <div class="command-list">
+                        <div class="command-item">
+                            <code class="command-name">ls [-lah]</code>
+                            <span class="command-desc">列出目录内容</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">cd [路径]</code>
+                            <span class="command-desc">切换目录</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">pwd</code>
+                            <span class="command-desc">显示当前目录</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">mkdir [-p] [目录名]</code>
+                            <span class="command-desc">创建目录</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">rm [-rf] [文件/目录]</code>
+                            <span class="command-desc">删除文件或目录</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">cp [-r] [源] [目标]</code>
+                            <span class="command-desc">复制文件或目录</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">mv [源] [目标]</code>
+                            <span class="command-desc">移动或重命名</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">cat [文件]</code>
+                            <span class="command-desc">显示文件内容</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">grep [模式] [文件]</code>
+                            <span class="command-desc">搜索文本</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">find [路径] -name [名称]</code>
+                            <span class="command-desc">查找文件</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="command-category">
+                    <h3 class="category-title">⚙️ 系统信息</h3>
+                    <div class="command-list">
+                        <div class="command-item">
+                            <code class="command-name">uname -a</code>
+                            <span class="command-desc">显示系统信息</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">lsb_release -a</code>
+                            <span class="command-desc">显示发行版信息</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">hostname</code>
+                            <span class="command-desc">显示主机名</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">whoami</code>
+                            <span class="command-desc">显示当前用户</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">df -h</code>
+                            <span class="command-desc">显示磁盘使用情况</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">free -h</code>
+                            <span class="command-desc">显示内存使用情况</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">top / htop</code>
+                            <span class="command-desc">显示进程和资源</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">uptime</code>
+                            <span class="command-desc">显示系统运行时间</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="command-category">
+                    <h3 class="category-title">🌐 网络</h3>
+                    <div class="command-list">
+                        <div class="command-item">
+                            <code class="command-name">ip addr</code>
+                            <span class="command-desc">显示网络接口</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">ping [地址]</code>
+                            <span class="command-desc">测试网络连接</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">netstat -tulpn</code>
+                            <span class="command-desc">显示网络连接</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">ss -tulpn</code>
+                            <span class="command-desc">显示套接字统计</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">curl [URL]</code>
+                            <span class="command-desc">传输数据</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">wget [URL]</code>
+                            <span class="command-desc">下载文件</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="command-category">
+                    <h3 class="category-title">🔧 进程和权限</h3>
+                    <div class="command-list">
+                        <div class="command-item">
+                            <code class="command-name">ps aux</code>
+                            <span class="command-desc">列出所有进程</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">kill [-9] [PID]</code>
+                            <span class="command-desc">终止进程</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">sudo [命令]</code>
+                            <span class="command-desc">以 root 权限执行</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">chmod [权限] [文件]</code>
+                            <span class="command-desc">修改文件权限</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">chown [用户]:[组] [文件]</code>
+                            <span class="command-desc">修改文件所有者</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="command-category">
+                    <h3 class="category-title">📦 包管理</h3>
+                    <div class="command-list">
+                        <div class="command-item">
+                            <code class="command-name">apt update</code>
+                            <span class="command-desc">更新包列表 (Debian/Ubuntu)</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">apt install [包名]</code>
+                            <span class="command-desc">安装软件包 (Debian/Ubuntu)</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">yum install [包名]</code>
+                            <span class="command-desc">安装软件包 (RedHat/CentOS)</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">dnf install [包名]</code>
+                            <span class="command-desc">安装软件包 (Fedora)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="command-category">
+                    <h3 class="category-title">🛠️ 系统管理</h3>
+                    <div class="command-list">
+                        <div class="command-item">
+                            <code class="command-name">systemctl status [服务]</code>
+                            <span class="command-desc">查看服务状态</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">systemctl start [服务]</code>
+                            <span class="command-desc">启动服务</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">systemctl stop [服务]</code>
+                            <span class="command-desc">停止服务</span>
+                        </div>
+                        <div class="command-item">
+                            <code class="command-name">systemctl enable [服务]</code>
+                            <span class="command-desc">设置服务开机自启</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn-secondary" onclick="closeCommandReference()">
+                <i data-feather="x"></i>
+                <span>关闭</span>
+            </button>
+        </div>
+    </div>
+</div>
