@@ -9,31 +9,16 @@ function escapeHtml(text) {
 
 // 关于弹窗
 function showAbout() {
-    alert(`
-╔════════════════════════════════════════╗
-║     CoolTerminal v1.0.0              ║
-║     现代化终端模拟器                  ║
-╚════════════════════════════════════════╝
+    const modal = document.getElementById('aboutModal');
+    if (modal) {
+        modal.classList.add('active');
+        if (typeof feather !== 'undefined') feather.replace();
+    }
+}
 
-✨ 功能特性：
-- 打字机效果的命令输出
-- 智能命令历史（50条不重复）
-- 双模式：模拟命令 / 真实命令
-- 右侧可开关历史面板
-- 上下键快速导航历史
-
-🔒 安全特性：
-- 危险命令拦截
-- 执行超时保护（10秒）
-- 完善的错误处理
-
-🛠️ 技术栈：
-- 后端：Python Flask
-- 前端：原生 JavaScript + CSS3
-- 图标：Feather Icons
-
-Made with ❤️ by CoolTerminal Team
-    `);
+function closeAbout() {
+    const modal = document.getElementById('aboutModal');
+    if (modal) modal.classList.remove('active');
 }
 
 // 命令参考手册模态框
@@ -60,6 +45,7 @@ function closeCommandReference() {
 document.addEventListener('click', function(e) {
     if (e.target.classList.contains('modal-overlay')) {
         closeCommandReference();
+        closeAbout();
     }
 });
 

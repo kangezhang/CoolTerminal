@@ -26,6 +26,62 @@
     <!-- 命令参考手册模态框 -->
     {% include 'components/command_reference_modal.html' %}
 
+    <!-- 关于模态框 -->
+    <div class="modal-overlay" id="aboutModal">
+        <div class="modal about-modal">
+            <div class="modal-header">
+                <h2 class="modal-title">关于 CoolTerminal</h2>
+                <button class="modal-close" onclick="closeAbout()">
+                    <i data-feather="x"></i>
+                </button>
+            </div>
+            <div class="modal-body about-body">
+                <div class="about-logo">
+                    <i data-feather="terminal" class="about-logo-icon"></i>
+                    <div class="about-logo-text">
+                        <span class="about-name">CoolTerminal</span>
+                        <span class="about-version">v2.0.0</span>
+                    </div>
+                </div>
+                <p class="about-desc">现代化终端 · 实时流式输出 · 跨平台</p>
+
+                <div class="about-features">
+                    <div class="about-feature-item">
+                        <i data-feather="zap"></i>
+                        <span>实时流式输出，无需等待命令结束</span>
+                    </div>
+                    <div class="about-feature-item">
+                        <i data-feather="cpu"></i>
+                        <span>Tab 补全 · Ctrl+C 中断 · ANSI 颜色</span>
+                    </div>
+                    <div class="about-feature-item">
+                        <i data-feather="layers"></i>
+                        <span>多标签终端，各自独立工作目录</span>
+                    </div>
+                    <div class="about-feature-item">
+                        <i data-feather="clock"></i>
+                        <span>命令历史，上下键快速导航</span>
+                    </div>
+                    <div class="about-feature-item">
+                        <i data-feather="shield"></i>
+                        <span>危险命令拦截，断线自动重连</span>
+                    </div>
+                    <div class="about-feature-item">
+                        <i data-feather="monitor"></i>
+                        <span>支持 Windows / macOS / Linux</span>
+                    </div>
+                </div>
+
+                <div class="about-stack">
+                    <span class="about-stack-item">Python Flask</span>
+                    <span class="about-stack-item">Socket.IO</span>
+                    <span class="about-stack-item">Electron</span>
+                    <span class="about-stack-item">Vanilla JS</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Feather Icons -->
     <script src="https://unpkg.com/feather-icons"></script>
 

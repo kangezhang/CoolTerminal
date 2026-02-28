@@ -1,7 +1,7 @@
 {
   "name": "coolterminal",
   "version": "1.0.0",
-  "description": "现代化终端模拟器 - 支持 Windows/Mac/Linux",
+  "description": "现代化终端 - 支持 Windows/Mac/Linux",
   "main": "electron/main.js",
   "scripts": {
     "start": "electron .",
@@ -150,7 +150,6 @@
   },
   "keywords": [
     "terminal",
-    "emulator",
     "command-line",
     "cli",
     "shell"

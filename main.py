@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-CoolTerminal - 现代化终端模拟器
+CoolTerminal - 现代化终端
 Flask + SocketIO 后端 - 支持实时流式输出、stdin 交互、Ctrl+C 中断
 """
 
@@ -347,7 +347,15 @@ def on_execute(data):
         return
 
     # 在后台线程中执行命令并流式推送输出
+    def _safe_emit(event, data):
+        """静默忽略客户端已断开时的发送错误"""
+        try:
+            socketio.emit(event, data, to=session_id)
+        except Exception:
+            pass
+
     def run_command():
+        exit_code = -1
         system = platform.system()
         try:
             if system == 'Windows':
@@ -380,35 +388,30 @@ def on_execute(data):
 
             # 逐行读取输出并推送
             for line in iter(proc.stdout.readline, ''):
-                socketio.emit('output', {
+                _safe_emit('output', {
                     'terminal_id': terminal_id,
                     'data': line,
                     'type': 'output'
-                }, to=session_id)
+                })
 
             proc.stdout.close()
             exit_code = proc.wait()
 
-            socketio.emit('command_done', {
+        except Exception as e:
+            _safe_emit('output', {
+                'terminal_id': terminal_id,
+                'data': f'执行错误: {e}\r\n',
+                'type': 'error'
+            })
+        finally:
+            # 无论如何都发送 command_done，确保前端能解锁
+            with sess.process_lock:
+                sess.process = None
+            _safe_emit('command_done', {
                 'terminal_id': terminal_id,
                 'exit_code': exit_code,
                 'cwd': sess.cwd
-            }, to=session_id)
-
-        except Exception as e:
-            socketio.emit('output', {
-                'terminal_id': terminal_id,
-                'data': f'❌ 执行错误: {e}\r\n',
-                'type': 'error'
-            }, to=session_id)
-            socketio.emit('command_done', {
-                'terminal_id': terminal_id,
-                'exit_code': -1,
-                'cwd': sess.cwd
-            }, to=session_id)
-        finally:
-            with sess.process_lock:
-                sess.process = None
+            })
 
     t = threading.Thread(target=run_command, daemon=True)
     t.start()
@@ -517,7 +520,7 @@ def main():
     print(f"""
 ╔════════════════════════════════════════════╗
 ║     CoolTerminal v{VERSION}            ║
-║     现代化终端模拟器 (WebSocket 模式)     ║
+║     现代化终端 (WebSocket 模式)     ║
 ╚════════════════════════════════════════════╝
 
 🚀 服务器正在端口 {port} 上启动...

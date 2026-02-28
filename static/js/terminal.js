@@ -113,6 +113,21 @@ class Terminal {
         this.tabCandidates = [];  // Tab 补全候选
         this.tabIndex = -1;       // 当前 Tab 候选索引
         this.tabOriginal = '';    // Tab 补全前的原始输入
+        this._cmdTimeout = null;  // 超时计时器
+    }
+
+    // 强制解锁终端（断线/超时时调用）
+    forceUnlock(message = '') {
+        if (this._cmdTimeout) { clearTimeout(this._cmdTimeout); this._cmdTimeout = null; }
+        if (message) {
+            this.outputHtml += `<div class="terminal-line"><span class="terminal-result warning">${AnsiRenderer._escapeHtml(message)}</span></div>`;
+        }
+        // 直接复位，不走 finalizeOutput（避免循环）
+        const streamId = `stream-${this.id}`;
+        const el = document.getElementById(streamId);
+        if (el) el.removeAttribute('id');
+        this.outputHtml = this.outputHtml.replace(new RegExp(`id="${streamId}"`), '');
+        this.isRunning = false;
     }
 
     // 添加命令行到输出
@@ -288,14 +303,32 @@ const TerminalManager = {
             return;
         }
 
-        this.socket = io();
+        this.socket = io({
+            reconnection: true,
+            reconnectionAttempts: Infinity,
+            reconnectionDelay: 1000,
+            reconnectionDelayMax: 5000,
+        });
 
         this.socket.on('connect', () => {
             console.log('WebSocket 已连接:', this.socket.id);
+            this._setConnectionStatus('connected');
+            // 重连后解锁所有卡住的终端
+            this.terminals.forEach(t => { if (t.isRunning) t.forceUnlock(); });
+            this.updateInputState();
         });
 
-        this.socket.on('disconnect', () => {
-            console.warn('WebSocket 断开连接');
+        this.socket.on('disconnect', (reason) => {
+            console.warn('WebSocket 断开:', reason);
+            this._setConnectionStatus('disconnected');
+            // 断线立即解锁所有终端，避免输入框永久禁用
+            this.terminals.forEach(t => { if (t.isRunning) t.forceUnlock('连接断开\r\n'); });
+            this.updateInputState();
+        });
+
+        this.socket.on('connect_error', (err) => {
+            console.error('WebSocket 连接失败:', err.message);
+            this._setConnectionStatus('error');
         });
 
         // 流式输出
@@ -312,6 +345,8 @@ const TerminalManager = {
         this.socket.on('command_done', (data) => {
             const terminal = this.terminals.find(t => t.id === data.terminal_id);
             if (!terminal) return;
+            // 清除该终端的超时计时器
+            if (terminal._cmdTimeout) { clearTimeout(terminal._cmdTimeout); terminal._cmdTimeout = null; }
             terminal.finalizeOutput();
             if (data.cwd) terminal.cwd = data.cwd;
             if (this.currentTerminalId === data.terminal_id) {
@@ -336,6 +371,16 @@ const TerminalManager = {
                 if (this.currentTerminalId === data.terminal_id) this.updatePrompt();
             }
         });
+    },
+
+    // 更新连接状态指示
+    _setConnectionStatus(status) {
+        const el = document.getElementById('terminalPromptDisplay');
+        if (!el) return;
+        el.title = status === 'connected' ? '已连接' :
+                   status === 'disconnected' ? '连接断开，正在重连...' : '连接失败';
+        el.style.color = status === 'connected' ? '' :
+                         status === 'disconnected' ? 'var(--warning)' : 'var(--danger)';
     },
 
     // 设置输入框事件
@@ -497,10 +542,16 @@ const TerminalManager = {
 
         if (this.socket && this.socket.connected) {
             // WebSocket 模式（流式）
-            this.socket.emit('execute', {
-                command: command,
-                terminal_id: terminal.id
-            });
+            this.socket.emit('execute', { command, terminal_id: terminal.id });
+
+            // 超时兜底：60s 没收到 command_done 则强制解锁
+            terminal._cmdTimeout = setTimeout(() => {
+                if (terminal.isRunning) {
+                    terminal.forceUnlock('命令超时（>60s），已强制终止等待\r\n');
+                    this.updateCurrentTerminalOutput();
+                    this.updateInputState();
+                }
+            }, 60000);
         } else {
             // REST 降级模式
             await this._executeRest(command, terminal);

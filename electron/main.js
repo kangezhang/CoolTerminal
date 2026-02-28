@@ -21,29 +21,32 @@ function getResourcePath(relativePath) {
   }
 }
 
-// 健康检查：检查服务器是否真的可以响应
-function checkServerHealth(maxRetries = 10, delayMs = 300) {
+// 健康检查：调用 /health 接口确认服务完全就绪
+function checkServerHealth(maxRetries = 20, delayMs = 500) {
   return new Promise((resolve, reject) => {
     let retries = 0;
 
     const check = () => {
-      const req = http.get(`http://127.0.0.1:${SERVER_PORT}/`, (res) => {
-        if (res.statusCode === 200) {
-          console.log('Server health check passed!');
-          resolve();
-        } else {
-          retry();
-        }
+      const req = http.get(`http://127.0.0.1:${SERVER_PORT}/health`, (res) => {
+        let body = '';
+        res.on('data', chunk => body += chunk);
+        res.on('end', () => {
+          try {
+            const json = JSON.parse(body);
+            if (res.statusCode === 200 && json.status === 'healthy') {
+              console.log('Server health check passed:', json);
+              resolve();
+            } else {
+              retry();
+            }
+          } catch (e) {
+            retry();
+          }
+        });
       });
 
-      req.on('error', (err) => {
-        retry();
-      });
-
-      req.setTimeout(500, () => {
-        req.destroy();
-        retry();
-      });
+      req.on('error', () => retry());
+      req.setTimeout(1000, () => { req.destroy(); retry(); });
     };
 
     const retry = () => {
@@ -269,7 +272,7 @@ function setupTrayMenu() {
     }
   ]);
 
-  tray.setToolTip('CoolTerminal - 现代化终端模拟器');
+  tray.setToolTip('CoolTerminal - 现代化终端');
   tray.setContextMenu(contextMenu);
 
   tray.on('double-click', () => {
