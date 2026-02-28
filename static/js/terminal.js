@@ -114,11 +114,14 @@ class Terminal {
         this.tabIndex = -1;       // 当前 Tab 候选索引
         this.tabOriginal = '';    // Tab 补全前的原始输入
         this._cmdTimeout = null;  // 超时计时器
+        this._forceUnlockTimeout = null; // 超时中断后的二次兜底解锁
+        this.activeCommandToken = null;  // 当前命令令牌（用于过滤旧命令残留输出）
     }
 
     // 强制解锁终端（断线/超时时调用）
     forceUnlock(message = '') {
         if (this._cmdTimeout) { clearTimeout(this._cmdTimeout); this._cmdTimeout = null; }
+        if (this._forceUnlockTimeout) { clearTimeout(this._forceUnlockTimeout); this._forceUnlockTimeout = null; }
         if (message) {
             this.outputHtml += `<div class="terminal-line"><span class="terminal-result warning">${AnsiRenderer._escapeHtml(message)}</span></div>`;
         }
@@ -128,6 +131,7 @@ class Terminal {
         if (el) el.removeAttribute('id');
         this.outputHtml = this.outputHtml.replace(new RegExp(`id="${streamId}"`), '');
         this.isRunning = false;
+        this.activeCommandToken = null;
     }
 
     // 添加命令行到输出
@@ -177,7 +181,10 @@ class Terminal {
         }
         // 同时清理 outputHtml 中的 id
         this.outputHtml = this.outputHtml.replace(new RegExp(`id="${streamId}"`), '');
+        if (this._cmdTimeout) { clearTimeout(this._cmdTimeout); this._cmdTimeout = null; }
+        if (this._forceUnlockTimeout) { clearTimeout(this._forceUnlockTimeout); this._forceUnlockTimeout = null; }
         this.isRunning = false;
+        this.activeCommandToken = null;
         TerminalManager.updateInputState();
     }
 
@@ -335,6 +342,10 @@ const TerminalManager = {
         this.socket.on('output', (data) => {
             const terminal = this.terminals.find(t => t.id === data.terminal_id);
             if (!terminal) return;
+
+            // 只接收当前活跃命令的输出，丢弃超时/中断后旧命令的残留输出
+            if (data.command_token && terminal.activeCommandToken !== data.command_token) return;
+
             terminal.appendOutput(data.data, data.type || 'output');
             if (this.currentTerminalId === data.terminal_id) {
                 this.updateCurrentTerminalOutput();
@@ -345,8 +356,13 @@ const TerminalManager = {
         this.socket.on('command_done', (data) => {
             const terminal = this.terminals.find(t => t.id === data.terminal_id);
             if (!terminal) return;
+
+            // 只处理当前活跃命令的完成事件，避免旧命令影响新命令状态
+            if (data.command_token && terminal.activeCommandToken !== data.command_token) return;
+
             // 清除该终端的超时计时器
             if (terminal._cmdTimeout) { clearTimeout(terminal._cmdTimeout); terminal._cmdTimeout = null; }
+            if (terminal._forceUnlockTimeout) { clearTimeout(terminal._forceUnlockTimeout); terminal._forceUnlockTimeout = null; }
             terminal.finalizeOutput();
             if (data.cwd) terminal.cwd = data.cwd;
             if (this.currentTerminalId === data.terminal_id) {
@@ -444,10 +460,11 @@ const TerminalManager = {
     // 发送 Ctrl+C 中断
     _sendInterrupt(terminal) {
         if (this.socket && this.socket.connected) {
-            this.socket.emit('interrupt', { terminal_id: terminal.id });
+            this.socket.emit('interrupt', {
+                terminal_id: terminal.id,
+                command_token: terminal.activeCommandToken
+            });
         }
-        terminal.isRunning = false;
-        this.updateInputState();
     },
 
     // 创建新终端
@@ -538,18 +555,31 @@ const TerminalManager = {
         }
 
         terminal.isRunning = true;
+        terminal.activeCommandToken = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
         this.updateInputState();
 
         if (this.socket && this.socket.connected) {
             // WebSocket 模式（流式）
-            this.socket.emit('execute', { command, terminal_id: terminal.id });
+            this.socket.emit('execute', {
+                command,
+                terminal_id: terminal.id,
+                command_token: terminal.activeCommandToken
+            });
 
-            // 超时兜底：60s 没收到 command_done 则强制解锁
+            // 超时处理：先尝试中断，再兜底解锁（并忽略旧输出）
             terminal._cmdTimeout = setTimeout(() => {
                 if (terminal.isRunning) {
-                    terminal.forceUnlock('命令超时（>60s），已强制终止等待\r\n');
+                    terminal.appendOutput('命令超时（>60s），正在尝试中断...\r\n', 'warning');
                     this.updateCurrentTerminalOutput();
-                    this.updateInputState();
+                    this._sendInterrupt(terminal);
+
+                    terminal._forceUnlockTimeout = setTimeout(() => {
+                        if (terminal.isRunning) {
+                            terminal.forceUnlock('中断未完成，已解锁输入；旧命令后续输出将被忽略\r\n');
+                            this.updateCurrentTerminalOutput();
+                            this.updateInputState();
+                        }
+                    }, 5000);
                 }
             }, 60000);
         } else {

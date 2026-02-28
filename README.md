@@ -203,6 +203,23 @@ CoolTerminal/
 
 ## 📦 打包部署
 
+### Windows 一键打包（推荐，直接复制执行）
+
+在项目根目录 `D:\Projects\CoolTerminal` 的 PowerShell 里执行：
+
+```powershell
+# 推荐：统一入口（等同于 build_installer.bat）
+.\start.bat build
+
+# 等价别名（任选其一）
+.\start.bat deploy
+.\start.bat package
+.\start.bat installer
+
+# 直接调用安装包脚本
+.\build_installer.bat
+```
+
 ### Electron 桌面应用
 
 ```bash

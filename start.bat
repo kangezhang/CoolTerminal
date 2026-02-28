@@ -31,6 +31,7 @@ if /i "%1"=="help"      set ACTION=help
 if /i "%1"=="/?"        set ACTION=help
 if /i "%1"=="-h"        set ACTION=help
 
+if "%ACTION%"=="start"   goto :do_start
 if "%ACTION%"=="stop"    goto :do_stop
 if "%ACTION%"=="restart" goto :do_restart
 if "%ACTION%"=="status"  goto :do_status

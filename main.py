@@ -19,6 +19,7 @@ import platform
 import threading
 import signal
 import shlex
+import time
 from pathlib import Path
 from datetime import datetime
 from flask import Flask, render_template, request, jsonify, send_from_directory
@@ -45,20 +46,47 @@ class TerminalSession:
         self.process = None          # 当前运行的子进程
         self.process_lock = threading.Lock()
 
-    def kill_process(self):
-        """终止当前进程（Ctrl+C）"""
+    def kill_process(self, grace_timeout: float = 1.5):
+        """终止当前进程（先软中断，再强杀），返回是否已停止"""
         with self.process_lock:
-            if self.process and self.process.poll() is None:
-                try:
-                    if platform.system() == 'Windows':
-                        self.process.send_signal(signal.CTRL_C_EVENT)
-                    else:
-                        self.process.send_signal(signal.SIGINT)
-                except Exception:
-                    try:
-                        self.process.terminate()
-                    except Exception:
-                        pass
+            proc = self.process
+
+        if not proc or proc.poll() is not None:
+            return True
+
+        try:
+            if platform.system() == 'Windows':
+                proc.send_signal(signal.CTRL_C_EVENT)
+            else:
+                proc.send_signal(signal.SIGINT)
+        except Exception:
+            try:
+                proc.terminate()
+            except Exception:
+                pass
+
+        # 给软中断一点时间退出
+        deadline = time.time() + max(grace_timeout, 0)
+        while time.time() < deadline:
+            if proc.poll() is not None:
+                return True
+            time.sleep(0.05)
+
+        # 兜底强杀，避免前端超时后后台进程继续刷输出
+        try:
+            if platform.system() == 'Windows':
+                subprocess.run(
+                    ['taskkill', '/PID', str(proc.pid), '/T', '/F'],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    check=False
+                )
+            else:
+                proc.kill()
+        except Exception:
+            pass
+
+        return proc.poll() is not None
 
     def is_running(self):
         with self.process_lock:
@@ -305,6 +333,7 @@ def on_execute(data):
     session_id = request.sid
     command = data.get('command', '').strip()
     terminal_id = data.get('terminal_id', 1)
+    command_token = data.get('command_token')
 
     if not command:
         return
@@ -320,9 +349,15 @@ def on_execute(data):
         emit('output', {
             'terminal_id': terminal_id,
             'data': '⚠️ 安全限制：此命令已被阻止（危险操作）\r\n',
-            'type': 'error'
+            'type': 'error',
+            'command_token': command_token
         })
-        emit('command_done', {'terminal_id': terminal_id, 'exit_code': -1, 'cwd': sess.cwd})
+        emit('command_done', {
+            'terminal_id': terminal_id,
+            'exit_code': -1,
+            'cwd': sess.cwd,
+            'command_token': command_token
+        })
         return
 
     # 处理 cd 命令
@@ -335,15 +370,31 @@ def on_execute(data):
         path = os.path.normpath(path)
         if os.path.isdir(path):
             sess.cwd = path
-            emit('output', {'terminal_id': terminal_id, 'data': '', 'type': 'success'})
-            emit('command_done', {'terminal_id': terminal_id, 'exit_code': 0, 'cwd': sess.cwd})
+            emit('output', {
+                'terminal_id': terminal_id,
+                'data': '',
+                'type': 'success',
+                'command_token': command_token
+            })
+            emit('command_done', {
+                'terminal_id': terminal_id,
+                'exit_code': 0,
+                'cwd': sess.cwd,
+                'command_token': command_token
+            })
         else:
             emit('output', {
                 'terminal_id': terminal_id,
                 'data': f'系统找不到指定的路径: {path}\r\n',
-                'type': 'error'
+                'type': 'error',
+                'command_token': command_token
             })
-            emit('command_done', {'terminal_id': terminal_id, 'exit_code': 1, 'cwd': sess.cwd})
+            emit('command_done', {
+                'terminal_id': terminal_id,
+                'exit_code': 1,
+                'cwd': sess.cwd,
+                'command_token': command_token
+            })
         return
 
     # 在后台线程中执行命令并流式推送输出
@@ -391,7 +442,8 @@ def on_execute(data):
                 _safe_emit('output', {
                     'terminal_id': terminal_id,
                     'data': line,
-                    'type': 'output'
+                    'type': 'output',
+                    'command_token': command_token
                 })
 
             proc.stdout.close()
@@ -401,7 +453,8 @@ def on_execute(data):
             _safe_emit('output', {
                 'terminal_id': terminal_id,
                 'data': f'执行错误: {e}\r\n',
-                'type': 'error'
+                'type': 'error',
+                'command_token': command_token
             })
         finally:
             # 无论如何都发送 command_done，确保前端能解锁
@@ -410,7 +463,8 @@ def on_execute(data):
             _safe_emit('command_done', {
                 'terminal_id': terminal_id,
                 'exit_code': exit_code,
-                'cwd': sess.cwd
+                'cwd': sess.cwd,
+                'command_token': command_token
             })
 
     t = threading.Thread(target=run_command, daemon=True)
@@ -436,25 +490,29 @@ def on_interrupt(data):
     session_id = request.sid
     sess = get_or_create_session(session_id)
     terminal_id = data.get('terminal_id', 1)
+    command_token = data.get('command_token')
 
     if sess.is_running():
         sess.kill_process()
         socketio.emit('output', {
             'terminal_id': terminal_id,
             'data': '^C\r\n',
-            'type': 'warning'
+            'type': 'warning',
+            'command_token': command_token
         }, to=session_id)
     else:
         # 没有运行中的进程，只输出 ^C
         socketio.emit('output', {
             'terminal_id': terminal_id,
             'data': '^C\r\n',
-            'type': 'warning'
+            'type': 'warning',
+            'command_token': command_token
         }, to=session_id)
         socketio.emit('command_done', {
             'terminal_id': terminal_id,
             'exit_code': 130,
-            'cwd': sess.cwd
+            'cwd': sess.cwd,
+            'command_token': command_token
         }, to=session_id)
 
 @socketio.on('tab_complete')
