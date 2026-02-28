@@ -63,68 +63,86 @@ function checkServerHealth(maxRetries = 10, delayMs = 300) {
 // 启动Python服务器
 function startPythonServer() {
   return new Promise((resolve, reject) => {
-    const pythonPath = process.platform === 'win32' ? 'python' : 'python3';
-    const mainPyPath = getResourcePath('main.py');
+    let execPath, execArgs, cwd;
 
-    console.log('Starting Python server at:', mainPyPath);
+    if (app.isPackaged) {
+      // 打包后：运行 PyInstaller 生成的独立 exe
+      const exeName = process.platform === 'win32' ? 'coolterminal_server.exe' : 'coolterminal_server';
+      execPath = path.join(process.resourcesPath, 'server', exeName);
+      execArgs = [SERVER_PORT.toString()];
+      cwd = path.join(process.resourcesPath, 'server');
+    } else {
+      // 开发模式：直接运行 python main.py
+      execPath = process.platform === 'win32' ? 'python' : 'python3';
+      execArgs = [getResourcePath('main.py'), SERVER_PORT.toString()];
+      cwd = path.dirname(getResourcePath('main.py'));
+    }
 
-    // 检查main.py是否存在
-    if (!fs.existsSync(mainPyPath)) {
-      reject(new Error(`Python main.py not found at: ${mainPyPath}`));
+    console.log('Starting server:', execPath, execArgs);
+
+    if (!fs.existsSync(app.isPackaged ? execPath : getResourcePath('main.py'))) {
+      reject(new Error(`Server not found at: ${execPath}`));
       return;
     }
 
-    // 启动Python进程（使用 --electron 参数避免交互式输入）
-    pythonProcess = spawn(pythonPath, [mainPyPath, SERVER_PORT.toString(), '--electron'], {
-      cwd: path.dirname(mainPyPath),
+    pythonProcess = spawn(execPath, execArgs, {
+      cwd,
       env: { ...process.env, PYTHONUNBUFFERED: '1' }
     });
 
     let serverStartDetected = false;
 
     pythonProcess.stdout.on('data', (data) => {
-      console.log(`[Python]: ${data.toString()}`);
+      const text = data.toString();
+      console.log(`[Server]: ${text}`);
 
-      // 检测服务器启动成功消息
-      if (data.toString().includes('Flask服务器正在端口') && !serverStartDetected) {
+      // 检测服务器启动成功（匹配新版 main.py 的输出）
+      if (!serverStartDetected && (
+        text.includes('服务器正在端口') ||
+        text.includes('Running on') ||
+        text.includes('Listening on')
+      )) {
         serverStartDetected = true;
-        console.log('Flask server start message detected, performing health check...');
-
-        // 等待服务器真正可以响应
         checkServerHealth()
-          .then(() => {
-            resolve();
-          })
-          .catch((err) => {
-            console.error('Health check failed:', err);
-            reject(err);
-          });
+          .then(() => resolve())
+          .catch((err) => reject(err));
       }
     });
 
     pythonProcess.stderr.on('data', (data) => {
-      console.error(`[Python Error]: ${data.toString()}`);
+      const text = data.toString();
+      console.error(`[Server Error]: ${text}`);
+      // eventlet/socketio 的正常启动信息也走 stderr
+      if (!serverStartDetected && (
+        text.includes('Running on') ||
+        text.includes('Listening on')
+      )) {
+        serverStartDetected = true;
+        checkServerHealth()
+          .then(() => resolve())
+          .catch((err) => reject(err));
+      }
     });
 
     pythonProcess.on('error', (error) => {
-      console.error('Failed to start Python process:', error);
+      console.error('Failed to start server process:', error);
       reject(error);
     });
 
     pythonProcess.on('close', (code) => {
-      console.log(`Python process exited with code ${code}`);
+      console.log(`Server process exited with code ${code}`);
       pythonProcess = null;
     });
 
-    // 设置超时（10秒）
+    // 15秒超时后直接做健康检查
     setTimeout(() => {
       if (!serverStartDetected) {
-        console.log('Timeout waiting for server, trying health check anyway...');
-        checkServerHealth(5, 500)
+        console.log('Startup message not detected, trying health check...');
+        checkServerHealth(10, 800)
           .then(() => resolve())
-          .catch(() => reject(new Error('Python server failed to start within timeout')));
+          .catch(() => reject(new Error('Server failed to start within 15s')));
       }
-    }, 10000);
+    }, 15000);
   });
 }
 
@@ -137,6 +155,14 @@ function stopPythonServer() {
   }
 }
 
+// 获取图标路径
+function getIconPath() {
+  if (app.isPackaged) {
+    return path.join(process.resourcesPath, 'app', 'assets', 'icon_terminal.ico');
+  }
+  return path.join(__dirname, '..', 'assets', 'icon_terminal.ico');
+}
+
 // 创建主窗口
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -144,7 +170,7 @@ function createWindow() {
     height: 800,
     minWidth: 800,
     minHeight: 600,
-    icon: path.join(__dirname, '..', 'syncing.ico'),
+    icon: getIconPath(),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -152,9 +178,9 @@ function createWindow() {
       webSecurity: true
     },
     autoHideMenuBar: true,
-    title: 'Connet - 跨设备文件夹同步工具',
-    backgroundColor: '#0f0f12', // 匹配项目背景色
-    show: false // 先不显示，加载完成后再显示
+    title: 'CoolTerminal',
+    backgroundColor: '#0f0f12',
+    show: false
   });
 
   // 先加载loading页面
@@ -203,43 +229,16 @@ function createWindow() {
 
 // 创建系统托盘
 function createTray() {
-  // 根据平台选择合适的图标格式
-  let iconPath;
-  if (process.platform === 'darwin') {
-    // macOS: 优先使用 .icns，备选 .png（16x16 for retina）
-    const icnsPath = path.join(__dirname, '..', 'syncing.icns');
-    const pngPath = path.join(__dirname, '..', 'icon.png');
-
-    if (fs.existsSync(icnsPath)) {
-      iconPath = icnsPath;
-    } else if (fs.existsSync(pngPath)) {
-      iconPath = pngPath;
-    } else {
-      // 使用Electron默认图标
-      console.warn('No suitable tray icon found for macOS, using default');
-      const icon = nativeImage.createEmpty();
-      tray = new Tray(icon);
-      tray.setTitle('Connet'); // macOS可以显示文本
-      setupTrayMenu();
-      return;
-    }
-  } else {
-    // Windows/Linux: 使用 .ico 或 .png
-    iconPath = path.join(__dirname, '..', 'syncing.ico');
-    if (!fs.existsSync(iconPath)) {
-      iconPath = path.join(__dirname, '..', 'icon.png');
-    }
-  }
+  const iconPath = getIconPath();
 
   try {
     tray = new Tray(iconPath);
   } catch (error) {
     console.error('Failed to create tray icon:', error);
-    // 创建空图标作为后备
     const icon = nativeImage.createEmpty();
     tray = new Tray(icon);
     if (process.platform === 'darwin') {
-      tray.setTitle('Connet');
+      tray.setTitle('CoolTerminal');
     }
   }
 
@@ -270,7 +269,7 @@ function setupTrayMenu() {
     }
   ]);
 
-  tray.setToolTip('Connet - 跨设备同步工具');
+  tray.setToolTip('CoolTerminal - 现代化终端模拟器');
   tray.setContextMenu(contextMenu);
 
   tray.on('double-click', () => {

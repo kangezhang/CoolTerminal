@@ -2,38 +2,87 @@
 # -*- coding: utf-8 -*-
 """
 CoolTerminal - 现代化终端模拟器
-Flask 后端服务 - 支持 Windows/Mac/Linux
+Flask + SocketIO 后端 - 支持实时流式输出、stdin 交互、Ctrl+C 中断
 """
 
 import os
 import sys
+
+# Windows 控制台强制 UTF-8，避免 emoji/中文 GBK 编码错误
+if sys.platform == 'win32':
+    import io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+
 import subprocess
 import platform
+import threading
+import signal
 import shlex
 from pathlib import Path
 from datetime import datetime
 from flask import Flask, render_template, request, jsonify, send_from_directory
 from flask_cors import CORS
+from flask_socketio import SocketIO, emit, join_room, leave_room
 
 # 创建 Flask 应用
 app = Flask(__name__)
-CORS(app)  # 允许跨域请求
-
-# 应用版本
-VERSION = "1.0.0"
-
-# 配置
 app.config['SECRET_KEY'] = 'coolterminal-secret-key-2024'
-app.config['JSON_AS_ASCII'] = False  # 支持中文
+app.config['JSON_AS_ASCII'] = False
+CORS(app)
 
-# 当前工作目录（用户可以通过 cd 改变）
-CURRENT_DIR = os.path.expanduser('~')  # 默认用户主目录
+# SocketIO（threading 模式，PyInstaller 兼容性最好）
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
+VERSION = "2.0.0"
+
+# ============ 终端会话管理 ============
+# 每个终端标签对应一个独立的会话，维护独立的 cwd 和进程
+class TerminalSession:
+    def __init__(self, session_id):
+        self.session_id = session_id
+        self.cwd = os.path.expanduser('~')
+        self.process = None          # 当前运行的子进程
+        self.process_lock = threading.Lock()
+
+    def kill_process(self):
+        """终止当前进程（Ctrl+C）"""
+        with self.process_lock:
+            if self.process and self.process.poll() is None:
+                try:
+                    if platform.system() == 'Windows':
+                        self.process.send_signal(signal.CTRL_C_EVENT)
+                    else:
+                        self.process.send_signal(signal.SIGINT)
+                except Exception:
+                    try:
+                        self.process.terminate()
+                    except Exception:
+                        pass
+
+    def is_running(self):
+        with self.process_lock:
+            return self.process is not None and self.process.poll() is None
+
+# 全局会话字典 {session_id: TerminalSession}
+sessions: dict[str, TerminalSession] = {}
+sessions_lock = threading.Lock()
+
+def get_or_create_session(session_id: str) -> TerminalSession:
+    with sessions_lock:
+        if session_id not in sessions:
+            sessions[session_id] = TerminalSession(session_id)
+        return sessions[session_id]
+
+def remove_session(session_id: str):
+    with sessions_lock:
+        if session_id in sessions:
+            sess = sessions.pop(session_id)
+            sess.kill_process()
 
 # ============ 跨平台工具函数 ============
 
 def get_platform_info():
-    """获取平台信息"""
     system = platform.system()
     return {
         'system': system,
@@ -45,227 +94,113 @@ def get_platform_info():
         'python_version': platform.python_version()
     }
 
-
 def get_shell_for_platform():
-    """获取当前平台的默认 shell"""
     system = platform.system()
-
     if system == 'Windows':
-        # Windows 优先使用 PowerShell，否则 cmd
-        if os.path.exists('C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe'):
+        if os.path.exists(r'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe'):
             return 'powershell'
         return 'cmd'
-    elif system == 'Darwin':  # macOS
+    elif system == 'Darwin':
         return os.environ.get('SHELL', '/bin/zsh')
-    else:  # Linux
+    else:
         return os.environ.get('SHELL', '/bin/bash')
 
-
-def is_dangerous_command(command):
-    """检查是否为危险命令"""
+def is_dangerous_command(command: str) -> bool:
+    """精确匹配危险命令，避免误杀正常命令"""
+    import re
     dangerous_patterns = [
-        'rm -rf /',
-        'rm -rf *',
-        'format',
-        'del /f /s /q',
-        'shutdown',
-        'reboot',
-        'init 0',
-        'init 6',
-        ':(){:|:&};:',  # fork bomb
-        'mkfs',
-        'dd if=/dev/zero',
-        '> /dev/sda',
+        r'\brm\s+-rf\s+/',
+        r'\brm\s+-rf\s+\*',
+        r'\bdel\s+/f\s+/s\s+/q\s+[a-zA-Z]:\\',
+        r'\bformat\s+[a-zA-Z]:',       # 只匹配 format C: 这种形式
+        r'\bshutdown\b',
+        r'\breboot\b',
+        r'\binit\s+[06]\b',
+        r':\(\)\{:\|:&\};:',           # fork bomb
+        r'\bmkfs\b',
+        r'\bdd\s+if=/dev/zero',
+        r'>\s*/dev/sda',
     ]
+    cmd = command.strip()
+    for pattern in dangerous_patterns:
+        if re.search(pattern, cmd, re.IGNORECASE):
+            return True
+    return False
 
-    command_lower = command.lower()
-    return any(pattern in command_lower for pattern in dangerous_patterns)
-
-
-def execute_command_cross_platform(command, cwd=None):
-    """
-    跨平台执行命令
-
-    Args:
-        command: 要执行的命令
-        cwd: 工作目录
-
-    Returns:
-        dict: {success, output, exit_code, error}
-    """
-    system = platform.system()
-
+def get_tab_completions(partial: str, cwd: str) -> list:
+    """获取 Tab 补全候选列表"""
     try:
-        # 安全检查
-        if is_dangerous_command(command):
-            return {
-                'success': False,
-                'output': '⚠️ 安全限制：此命令已被阻止（危险操作）',
-                'exit_code': -1,
-                'error': '危险命令'
-            }
-
-        # 根据平台选择执行方式
-        if system == 'Windows':
-            # Windows 使用 cmd 或 PowerShell
-            result = subprocess.run(
-                command,
-                shell=True,
-                capture_output=True,
-                text=True,
-                timeout=30,
-                cwd=cwd,
-                encoding='gbk',  # Windows 中文编码
-                errors='ignore'
-            )
+        parts = partial.split(' ')
+        if len(parts) == 1:
+            # 补全命令名
+            prefix = parts[0]
+            candidates = []
+            # 从 PATH 中找可执行文件
+            for path_dir in os.environ.get('PATH', '').split(os.pathsep):
+                try:
+                    for f in os.listdir(path_dir):
+                        if f.lower().startswith(prefix.lower()):
+                            candidates.append(f)
+                except Exception:
+                    pass
+            # 也补全当前目录下的文件
+            try:
+                for f in os.listdir(cwd):
+                    if f.lower().startswith(prefix.lower()):
+                        candidates.append(f)
+            except Exception:
+                pass
+            return sorted(set(candidates))[:20]
         else:
-            # Linux/Mac 使用 bash/zsh
-            result = subprocess.run(
-                command,
-                shell=True,
-                capture_output=True,
-                text=True,
-                timeout=30,
-                cwd=cwd,
-                executable='/bin/bash'  # 明确指定 bash
-            )
+            # 补全路径参数
+            prefix = parts[-1]
+            base_dir = cwd
+            if os.sep in prefix or '/' in prefix:
+                base_dir = os.path.dirname(os.path.join(cwd, prefix))
+                prefix = os.path.basename(prefix)
+            try:
+                candidates = []
+                for f in os.listdir(base_dir):
+                    if f.lower().startswith(prefix.lower()):
+                        full = os.path.join(base_dir, f)
+                        candidates.append(f + ('/' if os.path.isdir(full) else ''))
+                return sorted(candidates)[:20]
+            except Exception:
+                return []
+    except Exception:
+        return []
 
-        # 合并 stdout 和 stderr
-        output = result.stdout if result.stdout else ''
-        if result.stderr:
-            output += '\n' + result.stderr
-
-        return {
-            'success': result.returncode == 0,
-            'output': output.strip() if output else '命令执行成功（无输出）',
-            'exit_code': result.returncode,
-            'error': None
-        }
-
-    except subprocess.TimeoutExpired:
-        return {
-            'success': False,
-            'output': '⏱️ 命令执行超时（>30秒），已被终止',
-            'exit_code': -1,
-            'error': '执行超时'
-        }
-    except Exception as e:
-        return {
-            'success': False,
-            'output': f'❌ 执行错误: {str(e)}',
-            'exit_code': -1,
-            'error': str(e)
-        }
-
-
-# ============ 路由定义 ============
+# ============ HTTP 路由 ============
 
 @app.route('/')
 def index():
-    """主页"""
     return render_template('index.html', version=VERSION, active_tab='terminal')
-
 
 @app.route('/static/<path:filename>')
 def static_files(filename):
-    """静态文件服务"""
     return send_from_directory('static', filename)
 
-
-# ============ 终端 API ============
-
-@app.route('/api/terminal/execute', methods=['POST'])
-def terminal_execute():
-    """执行终端命令（真实命令执行）"""
-    global CURRENT_DIR
-
-    try:
-        data = request.get_json()
-        command = data.get('command', '').strip()
-
-        if not command:
-            return jsonify({
-                'success': False,
-                'error': '命令不能为空'
-            })
-
-        # 特殊处理 cd 命令
-        if command.startswith('cd '):
-            path = command[3:].strip()
-
-            # 处理特殊路径
-            if path == '~':
-                path = os.path.expanduser('~')
-            elif path == '..':
-                path = os.path.dirname(CURRENT_DIR)
-            elif not os.path.isabs(path):
-                path = os.path.join(CURRENT_DIR, path)
-
-            # 检查路径是否存在
-            if os.path.isdir(path):
-                CURRENT_DIR = os.path.abspath(path)
-                return jsonify({
-                    'success': True,
-                    'output': f'切换到: {CURRENT_DIR}',
-                    'exit_code': 0
-                })
-            else:
-                return jsonify({
-                    'success': False,
-                    'output': f'目录不存在: {path}',
-                    'exit_code': 1
-                })
-
-        # 特殊处理 pwd 命令
-        if command == 'pwd':
-            return jsonify({
-                'success': True,
-                'output': CURRENT_DIR,
-                'exit_code': 0
-            })
-
-        # 执行命令
-        result = execute_command_cross_platform(command, cwd=CURRENT_DIR)
-
-        return jsonify({
-            'success': result['success'],
-            'output': result['output'],
-            'exit_code': result['exit_code'],
-            'error': result.get('error')
-        })
-
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': f'请求处理失败: {str(e)}',
-            'output': f'❌ 服务器错误: {str(e)}'
-        })
-
+@app.route('/health', methods=['GET'])
+def health_check():
+    return jsonify({
+        'status': 'healthy',
+        'version': VERSION,
+        'platform': platform.system(),
+        'timestamp': datetime.now().isoformat()
+    })
 
 @app.route('/api/terminal/platform', methods=['GET'])
 def terminal_platform():
-    """获取平台信息"""
     try:
         info = get_platform_info()
         info['shell'] = get_shell_for_platform()
-        info['cwd'] = CURRENT_DIR
-
-        return jsonify({
-            'success': True,
-            'data': info
-        })
+        return jsonify({'success': True, 'data': info})
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        })
-
+        return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/api/terminal/sysinfo', methods=['GET'])
 def terminal_sysinfo():
-    """获取系统信息"""
     try:
-        # 尝试导入 psutil
         try:
             import psutil
             has_psutil = True
@@ -275,110 +210,301 @@ def terminal_sysinfo():
         info = get_platform_info()
 
         if has_psutil:
-            # 增强系统信息
-            info['cpu'] = {
-                'count': psutil.cpu_count(),
-                'percent': psutil.cpu_percent(interval=1)
-            }
-
+            info['cpu'] = {'count': psutil.cpu_count(), 'percent': psutil.cpu_percent(interval=1)}
             memory = psutil.virtual_memory()
             info['memory'] = {
-                'total': memory.total,
-                'available': memory.available,
-                'percent': memory.percent,
                 'total_gb': round(memory.total / (1024**3), 2),
-                'available_gb': round(memory.available / (1024**3), 2)
+                'available_gb': round(memory.available / (1024**3), 2),
+                'percent': memory.percent
             }
-
             disk = psutil.disk_usage('/')
             info['disk'] = {
-                'total': disk.total,
-                'used': disk.used,
-                'free': disk.free,
-                'percent': disk.percent,
                 'total_gb': round(disk.total / (1024**3), 2),
-                'free_gb': round(disk.free / (1024**3), 2)
+                'free_gb': round(disk.free / (1024**3), 2),
+                'percent': disk.percent
             }
 
-        return jsonify({
-            'success': True,
-            'data': info,
-            'has_psutil': has_psutil
-        })
+        return jsonify({'success': True, 'data': info, 'has_psutil': has_psutil})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+# 保留旧的 REST API 作为降级方案
+@app.route('/api/terminal/execute', methods=['POST'])
+def terminal_execute_rest():
+    """REST 降级接口（无流式输出）"""
+    try:
+        data = request.get_json()
+        command = data.get('command', '').strip()
+        session_id = data.get('session_id', 'default')
+
+        if not command:
+            return jsonify({'success': False, 'error': '命令不能为空'})
+
+        sess = get_or_create_session(session_id)
+
+        if is_dangerous_command(command):
+            return jsonify({
+                'success': False,
+                'output': '⚠️ 安全限制：此命令已被阻止（危险操作）',
+                'exit_code': -1
+            })
+
+        if command.startswith('cd ') or command == 'cd':
+            path = command[3:].strip() if command.startswith('cd ') else os.path.expanduser('~')
+            if path == '~':
+                path = os.path.expanduser('~')
+            elif not os.path.isabs(path):
+                path = os.path.join(sess.cwd, path)
+            path = os.path.normpath(path)
+            if os.path.isdir(path):
+                sess.cwd = path
+                return jsonify({'success': True, 'output': f'切换到: {sess.cwd}', 'exit_code': 0, 'cwd': sess.cwd})
+            else:
+                return jsonify({'success': False, 'output': f'目录不存在: {path}', 'exit_code': 1})
+
+        system = platform.system()
+        try:
+            result = subprocess.run(
+                command, shell=True, capture_output=True,
+                text=True, timeout=30, cwd=sess.cwd,
+                encoding='gbk' if system == 'Windows' else 'utf-8',
+                errors='replace'
+            )
+            output = result.stdout or ''
+            if result.stderr:
+                output += result.stderr
+            return jsonify({
+                'success': result.returncode == 0,
+                'output': output.strip() or '命令执行成功（无输出）',
+                'exit_code': result.returncode,
+                'cwd': sess.cwd
+            })
+        except subprocess.TimeoutExpired:
+            return jsonify({'success': False, 'output': '⏱️ 命令执行超时（>30秒）', 'exit_code': -1})
+        except Exception as e:
+            return jsonify({'success': False, 'output': f'❌ 执行错误: {e}', 'exit_code': -1})
 
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
+        return jsonify({'success': False, 'error': str(e)})
+
+# ============ SocketIO 事件处理 ============
+
+@socketio.on('connect')
+def on_connect():
+    session_id = request.sid
+    get_or_create_session(session_id)
+    emit('connected', {'session_id': session_id, 'version': VERSION})
+
+@socketio.on('disconnect')
+def on_disconnect():
+    remove_session(request.sid)
+
+@socketio.on('execute')
+def on_execute(data):
+    """执行命令（流式输出）"""
+    session_id = request.sid
+    command = data.get('command', '').strip()
+    terminal_id = data.get('terminal_id', 1)
+
+    if not command:
+        return
+
+    sess = get_or_create_session(session_id)
+
+    # 如果有进程在运行，先终止
+    if sess.is_running():
+        sess.kill_process()
+
+    # 危险命令检查
+    if is_dangerous_command(command):
+        emit('output', {
+            'terminal_id': terminal_id,
+            'data': '⚠️ 安全限制：此命令已被阻止（危险操作）\r\n',
+            'type': 'error'
         })
+        emit('command_done', {'terminal_id': terminal_id, 'exit_code': -1, 'cwd': sess.cwd})
+        return
 
+    # 处理 cd 命令
+    if command.startswith('cd') and (len(command) == 2 or command[2] == ' '):
+        path = command[3:].strip() if len(command) > 3 else os.path.expanduser('~')
+        if path == '~':
+            path = os.path.expanduser('~')
+        elif not os.path.isabs(path):
+            path = os.path.join(sess.cwd, path)
+        path = os.path.normpath(path)
+        if os.path.isdir(path):
+            sess.cwd = path
+            emit('output', {'terminal_id': terminal_id, 'data': '', 'type': 'success'})
+            emit('command_done', {'terminal_id': terminal_id, 'exit_code': 0, 'cwd': sess.cwd})
+        else:
+            emit('output', {
+                'terminal_id': terminal_id,
+                'data': f'系统找不到指定的路径: {path}\r\n',
+                'type': 'error'
+            })
+            emit('command_done', {'terminal_id': terminal_id, 'exit_code': 1, 'cwd': sess.cwd})
+        return
 
-# ============ 健康检查 ============
+    # 在后台线程中执行命令并流式推送输出
+    def run_command():
+        system = platform.system()
+        try:
+            if system == 'Windows':
+                proc = subprocess.Popen(
+                    command,
+                    shell=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    stdin=subprocess.PIPE,
+                    cwd=sess.cwd,
+                    encoding='gbk',
+                    errors='replace',
+                    creationflags=subprocess.CREATE_NEW_PROCESS_GROUP
+                )
+            else:
+                proc = subprocess.Popen(
+                    command,
+                    shell=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    stdin=subprocess.PIPE,
+                    cwd=sess.cwd,
+                    encoding='utf-8',
+                    errors='replace',
+                    executable='/bin/bash'
+                )
 
-@app.route('/health', methods=['GET'])
-def health_check():
-    """健康检查端点"""
-    return jsonify({
-        'status': 'healthy',
-        'version': VERSION,
-        'platform': platform.system(),
-        'timestamp': datetime.now().isoformat()
+            with sess.process_lock:
+                sess.process = proc
+
+            # 逐行读取输出并推送
+            for line in iter(proc.stdout.readline, ''):
+                socketio.emit('output', {
+                    'terminal_id': terminal_id,
+                    'data': line,
+                    'type': 'output'
+                }, to=session_id)
+
+            proc.stdout.close()
+            exit_code = proc.wait()
+
+            socketio.emit('command_done', {
+                'terminal_id': terminal_id,
+                'exit_code': exit_code,
+                'cwd': sess.cwd
+            }, to=session_id)
+
+        except Exception as e:
+            socketio.emit('output', {
+                'terminal_id': terminal_id,
+                'data': f'❌ 执行错误: {e}\r\n',
+                'type': 'error'
+            }, to=session_id)
+            socketio.emit('command_done', {
+                'terminal_id': terminal_id,
+                'exit_code': -1,
+                'cwd': sess.cwd
+            }, to=session_id)
+        finally:
+            with sess.process_lock:
+                sess.process = None
+
+    t = threading.Thread(target=run_command, daemon=True)
+    t.start()
+
+@socketio.on('stdin')
+def on_stdin(data):
+    """向当前进程发送 stdin 输入"""
+    session_id = request.sid
+    sess = get_or_create_session(session_id)
+    input_data = data.get('data', '')
+
+    if sess.is_running() and sess.process.stdin:
+        try:
+            sess.process.stdin.write(input_data)
+            sess.process.stdin.flush()
+        except Exception:
+            pass
+
+@socketio.on('interrupt')
+def on_interrupt(data):
+    """Ctrl+C 中断当前进程"""
+    session_id = request.sid
+    sess = get_or_create_session(session_id)
+    terminal_id = data.get('terminal_id', 1)
+
+    if sess.is_running():
+        sess.kill_process()
+        socketio.emit('output', {
+            'terminal_id': terminal_id,
+            'data': '^C\r\n',
+            'type': 'warning'
+        }, to=session_id)
+    else:
+        # 没有运行中的进程，只输出 ^C
+        socketio.emit('output', {
+            'terminal_id': terminal_id,
+            'data': '^C\r\n',
+            'type': 'warning'
+        }, to=session_id)
+        socketio.emit('command_done', {
+            'terminal_id': terminal_id,
+            'exit_code': 130,
+            'cwd': sess.cwd
+        }, to=session_id)
+
+@socketio.on('tab_complete')
+def on_tab_complete(data):
+    """Tab 补全请求"""
+    session_id = request.sid
+    sess = get_or_create_session(session_id)
+    partial = data.get('partial', '')
+    terminal_id = data.get('terminal_id', 1)
+
+    completions = get_tab_completions(partial, sess.cwd)
+    emit('tab_completions', {
+        'terminal_id': terminal_id,
+        'partial': partial,
+        'completions': completions
     })
 
+@socketio.on('get_cwd')
+def on_get_cwd(data):
+    """获取当前工作目录"""
+    session_id = request.sid
+    sess = get_or_create_session(session_id)
+    terminal_id = data.get('terminal_id', 1)
+    emit('cwd_update', {'terminal_id': terminal_id, 'cwd': sess.cwd})
 
 # ============ 错误处理 ============
 
 @app.errorhandler(404)
 def not_found(error):
-    """404 错误处理"""
-    return jsonify({
-        'success': False,
-        'error': 'Not Found',
-        'message': '请求的资源不存在'
-    }), 404
-
+    return jsonify({'success': False, 'error': 'Not Found'}), 404
 
 @app.errorhandler(500)
 def internal_error(error):
-    """500 错误处理"""
-    return jsonify({
-        'success': False,
-        'error': 'Internal Server Error',
-        'message': '服务器内部错误'
-    }), 500
-
+    return jsonify({'success': False, 'error': 'Internal Server Error'}), 500
 
 # ============ 主程序入口 ============
 
 def check_permissions():
-    """检查并提示权限"""
     system = platform.system()
-
     if system == 'Windows':
-        # 检查是否以管理员身份运行
         try:
             import ctypes
-            is_admin = ctypes.windll.shell32.IsUserAnAdmin()
-            if not is_admin:
-                print("\n⚠️  警告：未以管理员身份运行")
-                print("某些命令可能需要管理员权限")
-                print("建议：右键选择 '以管理员身份运行'\n")
-        except:
+            if not ctypes.windll.shell32.IsUserAnAdmin():
+                print("\n⚠️  警告：未以管理员身份运行，某些命令可能需要管理员权限\n")
+        except Exception:
             pass
     else:
-        # Linux/Mac 检查 sudo 权限
         if os.geteuid() != 0:
-            print("\n⚠️  提示：未以 root 权限运行")
-            print("某些命令可能需要 sudo 权限")
-            print("建议：使用 sudo python main.py\n")
-
+            print("\n⚠️  提示：未以 root 权限运行，某些命令可能需要 sudo\n")
 
 def main():
-    """主函数"""
-    # 检查权限
     check_permissions()
 
-    # 获取端口参数
     port = 5001
     if len(sys.argv) > 1:
         try:
@@ -386,47 +512,28 @@ def main():
         except ValueError:
             print(f"⚠️ 无效的端口号: {sys.argv[1]}，使用默认端口 5001")
 
-    # 检查是否是 Electron 模式
-    electron_mode = '--electron' in sys.argv
-
-    # 获取平台信息
     platform_info = get_platform_info()
 
     print(f"""
 ╔════════════════════════════════════════════╗
-║     CoolTerminal v{VERSION}              ║
-║     现代化终端模拟器                      ║
+║     CoolTerminal v{VERSION}            ║
+║     现代化终端模拟器 (WebSocket 模式)     ║
 ╚════════════════════════════════════════════╝
 
-🚀 Flask 服务器正在端口 {port} 上启动...
-📂 工作目录: {os.getcwd()}
+🚀 服务器正在端口 {port} 上启动...
 💻 操作系统: {platform_info['system']} {platform_info['version']}
-🏗️  架构: {platform_info['machine']}
 🐍 Python: {platform_info['python_version']}
 🖥️  Shell: {get_shell_for_platform()}
-
-💡 使用提示：
-   - 模拟模式：安全的预设命令（无需后端）
-   - 真实模式：执行真实系统命令（需要权限）
-   - 支持平台：Windows / macOS / Linux
-
+⚡ 模式: 实时流式输出 + stdin 交互 + Ctrl+C 支持
 """)
 
-    # 启动 Flask 服务器
     try:
-        app.run(
-            host='0.0.0.0',
-            port=port,
-            debug=False,  # 禁用 debug 模式加快启动
-            use_reloader=False,  # 禁用自动重载
-            threaded=True
-        )
+        socketio.run(app, host='0.0.0.0', port=port, debug=False, use_reloader=False, allow_unsafe_werkzeug=True)
     except KeyboardInterrupt:
         print("\n\n👋 服务器已停止")
     except Exception as e:
         print(f"\n❌ 服务器启动失败: {e}")
         sys.exit(1)
-
 
 if __name__ == '__main__':
     main()

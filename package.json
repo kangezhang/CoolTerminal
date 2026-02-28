@@ -22,6 +22,7 @@
       "electron/**/*",
       "static/**/*",
       "templates/**/*",
+      "assets/**/*",
       "main.py",
       "requirements.txt",
       "!node_modules/**/*",
@@ -43,20 +44,33 @@
       {
         "from": "templates",
         "to": "app/templates"
+      },
+      {
+        "from": "assets",
+        "to": "app/assets"
+      },
+      {
+        "from": "dist/server/coolterminal_server",
+        "to": "server"
       }
     ],
     "win": {
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64", "ia32"]
+          "arch": [
+            "x64",
+            "ia32"
+          ]
         },
         {
           "target": "portable",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
-      "icon": "syncing.ico",
+      "icon": "assets/icon_terminal.ico",
       "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
       "requestedExecutionLevel": "highestAvailable"
     },
@@ -64,14 +78,20 @@
       "target": [
         {
           "target": "dmg",
-          "arch": ["x64", "arm64"]
+          "arch": [
+            "x64",
+            "arm64"
+          ]
         },
         {
           "target": "zip",
-          "arch": ["x64", "arm64"]
+          "arch": [
+            "x64",
+            "arm64"
+          ]
         }
       ],
-      "icon": "syncing.icns",
+      "icon": "assets/icon_terminal.ico",
       "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
       "category": "public.app-category.developer-tools"
     },
@@ -79,18 +99,26 @@
       "target": [
         {
           "target": "AppImage",
-          "arch": ["x64", "arm64"]
+          "arch": [
+            "x64",
+            "arm64"
+          ]
         },
         {
           "target": "deb",
-          "arch": ["x64", "arm64"]
+          "arch": [
+            "x64",
+            "arm64"
+          ]
         },
         {
           "target": "rpm",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
-      "icon": "icon.png",
+      "icon": "assets/icon_terminal.ico",
       "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
       "category": "Development"
     },
@@ -99,7 +127,10 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "CoolTerminal"
+      "shortcutName": "CoolTerminal",
+      "installerIcon": "assets/icon_terminal.ico",
+      "uninstallerIcon": "assets/icon_terminal.ico",
+      "installerHeaderIcon": "assets/icon_terminal.ico"
     },
     "dmg": {
       "contents": [
@@ -113,7 +144,8 @@
           "type": "link",
           "path": "/Applications"
         }
-      ]
+      ],
+      "icon": "assets/icon_terminal.ico"
     }
   },
   "keywords": [

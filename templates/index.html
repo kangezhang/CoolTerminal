@@ -13,5 +13,6 @@
 {% endblock %}
 
 {% block extra_js %}
-    <script src="{{ url_for('static', filename='js/terminal.js') }}?v=1.0.0"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="{{ url_for('static', filename='js/terminal.js') }}?v=2.0.0"></script>
 {% endblock %}

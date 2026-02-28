@@ -196,6 +196,24 @@
     opacity: 0.6;
 }
 
+/* 运行中状态 */
+.terminal-input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.terminal-input:disabled::placeholder {
+    color: var(--warning);
+    opacity: 0.8;
+}
+
+/* Tab 补全提示 */
+.tab-hint {
+    color: rgba(99, 102, 241, 0.8) !important;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+}
+
 /* 命令历史面板 */
 .terminal-history-panel {
     width: 320px;

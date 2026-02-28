@@ -1,190 +1,341 @@
-// ==== terminal.js - 多终端实例管理 ====
+// ==== terminal.js - WebSocket 实时终端 ====
 
-// 单个终端实例类
+// ============ ANSI 转义码渲染器 ============
+const AnsiRenderer = {
+    // ANSI 颜色映射（标准16色）
+    fgColors: {
+        30: '#4c4c4c', 31: '#ff5555', 32: '#55ff55', 33: '#ffff55',
+        34: '#5555ff', 35: '#ff55ff', 36: '#55ffff', 37: '#cccccc',
+        90: '#888888', 91: '#ff8888', 92: '#88ff88', 93: '#ffff88',
+        94: '#8888ff', 95: '#ff88ff', 96: '#88ffff', 97: '#ffffff'
+    },
+    bgColors: {
+        40: '#000000', 41: '#aa0000', 42: '#00aa00', 43: '#aa5500',
+        44: '#0000aa', 45: '#aa00aa', 46: '#00aaaa', 47: '#aaaaaa',
+        100: '#555555', 101: '#ff5555', 102: '#55ff55', 103: '#ffff55',
+        104: '#5555ff', 105: '#ff55ff', 106: '#55ffff', 107: '#ffffff'
+    },
+
+    /**
+     * 将含 ANSI 转义码的文本转换为 HTML
+     */
+    render(text) {
+        // 先做 HTML 转义（防 XSS），再处理 ANSI
+        const escaped = this._escapeHtml(text);
+        return this._parseAnsi(escaped);
+    },
+
+    _escapeHtml(text) {
+        return text
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    },
+
+    _parseAnsi(text) {
+        // 匹配 ESC[ ... m 序列
+        const ansiRegex = /\x1b\[([0-9;]*)m/g;
+        let result = '';
+        let lastIndex = 0;
+        let openSpans = 0;
+        let match;
+
+        while ((match = ansiRegex.exec(text)) !== null) {
+            // 添加转义序列之前的文本
+            result += text.slice(lastIndex, match.index);
+            lastIndex = match.index + match[0].length;
+
+            const codes = match[1].split(';').map(Number);
+            const styles = [];
+            let closeAll = false;
+
+            for (const code of codes) {
+                if (code === 0 || isNaN(code)) {
+                    closeAll = true;
+                } else if (code === 1) {
+                    styles.push('font-weight:bold');
+                } else if (code === 2) {
+                    styles.push('opacity:0.7');
+                } else if (code === 3) {
+                    styles.push('font-style:italic');
+                } else if (code === 4) {
+                    styles.push('text-decoration:underline');
+                } else if (code === 7) {
+                    // 反色：简单处理
+                    styles.push('filter:invert(1)');
+                } else if (this.fgColors[code]) {
+                    styles.push(`color:${this.fgColors[code]}`);
+                } else if (this.bgColors[code]) {
+                    styles.push(`background:${this.bgColors[code]}`);
+                } else if (code >= 38 && code <= 39) {
+                    // 256色/真彩色：跳过（复杂，暂不处理）
+                }
+            }
+
+            if (closeAll && openSpans > 0) {
+                result += '</span>'.repeat(openSpans);
+                openSpans = 0;
+            }
+
+            if (styles.length > 0) {
+                result += `<span style="${styles.join(';')}">`;
+                openSpans++;
+            }
+        }
+
+        // 添加剩余文本
+        result += text.slice(lastIndex);
+
+        // 关闭未关闭的 span
+        if (openSpans > 0) {
+            result += '</span>'.repeat(openSpans);
+        }
+
+        // 过滤掉其他 ANSI 控制序列（光标移动等，不渲染）
+        result = result.replace(/\x1b\[[0-9;]*[A-HJKSTfhilmnprsu]/g, '');
+        result = result.replace(/\x1b\][^\x07]*\x07/g, ''); // OSC 序列
+        result = result.replace(/\x1b[()][AB012]/g, '');    // 字符集切换
+
+        return result;
+    }
+};
+
+// ============ 单个终端实例 ============
 class Terminal {
     constructor(id, name) {
         this.id = id;
         this.name = name;
-        this.historyIndex = -1; // 当前历史索引（用于上下键导航）
-        this.isTyping = false; // 是否正在打字
-        this.typingSpeed = 20; // 打字速度（毫秒）
-        this.outputHtml = ''; // 终端输出的 HTML（不持久化）
-    }
-
-    // 执行命令
-    async executeCommand(command) {
-        if (this.isTyping) return;
-        if (!command.trim()) return;
-
-        // 添加命令到输出
-        this.addCommandLine(command);
-
-        // 添加到全局历史记录（不重复）
-        TerminalManager.addToGlobalHistory(command);
-
-        // 重置历史导航索引
         this.historyIndex = -1;
-
-        // 执行真实命令
-        await this.executeRealCommand(command);
+        this.outputHtml = '';
+        this.isRunning = false;   // 是否有命令在执行
+        this.cwd = '';            // 当前工作目录（由后端维护）
+        this.tabCandidates = [];  // Tab 补全候选
+        this.tabIndex = -1;       // 当前 Tab 候选索引
+        this.tabOriginal = '';    // Tab 补全前的原始输入
     }
 
     // 添加命令行到输出
     addCommandLine(command) {
         this.outputHtml += `
             <div class="terminal-line">
-                <span class="terminal-prompt">></span>
-                <span class="terminal-command">${this.escapeHtml(command)}</span>
+                <span class="terminal-prompt">${this._getCwdPrompt()}</span>
+                <span class="terminal-command">${AnsiRenderer._escapeHtml(command)}</span>
             </div>
         `;
     }
 
-    // 执行真实命令（调用后端 API）
-    async executeRealCommand(command) {
-        try {
-            this.isTyping = true;
-            const response = await fetch('/api/terminal/execute', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ command: command })
-            });
+    // 追加输出内容（流式）
+    appendOutput(text, type = 'output') {
+        const html = AnsiRenderer.render(text);
+        const streamId = `stream-${this.id}`;
+        const existing = document.getElementById(streamId);
 
-            const data = await response.json();
-
-            if (data.success) {
-                // 显示命令输出
-                const output = data.output || '命令执行成功（无输出）';
-                const className = data.exit_code === 0 ? 'success' : 'warning';
-                await this.typeOutput(output, className);
-            } else {
-                // 显示错误
-                await this.typeOutput(data.output || data.error, 'error');
-            }
-        } catch (error) {
-            await this.typeOutput(`连接错误: ${error.message}`, 'error');
-            await this.typeOutput('提示：请确保 Python 后端正在运行');
-        } finally {
-            this.isTyping = false;
+        if (existing) {
+            // 直接追加到 DOM，同时同步到 outputHtml
+            existing.innerHTML += html;
+            // 同步更新 outputHtml 中对应的内容
+            this._syncStreamToHtml(streamId, existing.innerHTML);
+        } else {
+            // 新建流式行
+            this.outputHtml += `<div class="terminal-line"><span class="terminal-result ${type}" id="${streamId}">${html}</span></div>`;
+            TerminalManager.updateCurrentTerminalOutput();
         }
+        TerminalManager.scrollToBottom();
     }
 
-    // 打字机效果输出
-    async typeOutput(text, className = '') {
-        this.isTyping = true;
+    // 将 DOM 中流式行的内容同步回 outputHtml
+    _syncStreamToHtml(streamId, innerHTML) {
+        const regex = new RegExp(`(<span[^>]*id="${streamId}"[^>]*>)[\\s\\S]*?(</span>)`);
+        this.outputHtml = this.outputHtml.replace(regex, `$1${innerHTML}$2`);
+    }
 
-        const lineId = `line-${Date.now()}-${Math.random()}`;
-        this.outputHtml += `
-            <div class="terminal-line">
-                <span class="terminal-result ${className}" id="${lineId}"></span>
-            </div>
-        `;
-
-        // 更新 DOM
-        TerminalManager.updateCurrentTerminalOutput();
-
-        const resultSpan = document.getElementById(lineId);
-        if (resultSpan) {
-            // 逐字符显示
-            for (let i = 0; i < text.length; i++) {
-                resultSpan.textContent += text[i];
-                TerminalManager.scrollToBottom();
-                await this.sleep(this.typingSpeed);
-            }
-
-            // 打字完成后，将最终内容同步回 outputHtml
-            // 找到这一行在 outputHtml 中的位置并更新
-            const escapedText = this.escapeHtml(text);
-            this.outputHtml = this.outputHtml.replace(
-                `<span class="terminal-result ${className}" id="${lineId}"></span>`,
-                `<span class="terminal-result ${className}">${escapedText}</span>`
-            );
+    // 命令完成，关闭流式行
+    finalizeOutput() {
+        // 移除流式行的 id，防止下次命令继续追加
+        const streamId = `stream-${this.id}`;
+        const el = document.getElementById(streamId);
+        if (el) {
+            // 同步最终内容到 outputHtml
+            this._syncStreamToHtml(streamId, el.innerHTML);
+            el.removeAttribute('id');
         }
-
-        this.isTyping = false;
-    }
-
-    // 立即输出（不使用打字机效果）
-    addOutput(text, className = '') {
-        this.outputHtml += `
-            <div class="terminal-line">
-                <span class="terminal-result ${className}">${this.escapeHtml(text)}</span>
-            </div>
-        `;
+        // 同时清理 outputHtml 中的 id
+        this.outputHtml = this.outputHtml.replace(new RegExp(`id="${streamId}"`), '');
+        this.isRunning = false;
+        TerminalManager.updateInputState();
     }
 
     // 清空屏幕
     clear() {
         this.outputHtml = '';
+        // 移除 DOM 中的流式行 id
+        const el = document.getElementById(`stream-${this.id}`);
+        if (el) el.removeAttribute('id');
     }
 
     // 历史导航
     navigateHistory(direction, input) {
-        const globalHistory = TerminalManager.getGlobalCommandHistory();
-        if (globalHistory.length === 0) return;
+        const history = TerminalManager.getGlobalCommandHistory();
+        if (history.length === 0) return;
 
         if (direction === 'up') {
-            this.historyIndex++;
-            if (this.historyIndex >= globalHistory.length) {
-                this.historyIndex = globalHistory.length - 1;
-            }
-        } else if (direction === 'down') {
-            this.historyIndex--;
-            if (this.historyIndex < -1) {
-                this.historyIndex = -1;
-            }
+            this.historyIndex = Math.min(this.historyIndex + 1, history.length - 1);
+        } else {
+            this.historyIndex = Math.max(this.historyIndex - 1, -1);
         }
 
-        if (this.historyIndex === -1) {
-            input.value = '';
+        input.value = this.historyIndex === -1 ? '' : history[history.length - 1 - this.historyIndex];
+        // 光标移到末尾
+        setTimeout(() => { input.selectionStart = input.selectionEnd = input.value.length; }, 0);
+    }
+
+    // Tab 补全
+    handleTab(input, completions) {
+        if (completions.length === 0) return;
+
+        if (completions.length === 1) {
+            // 唯一候选，直接补全
+            const parts = input.value.split(' ');
+            parts[parts.length - 1] = completions[0];
+            input.value = parts.join(' ');
+            this.tabCandidates = [];
+            this.tabIndex = -1;
         } else {
-            const cmd = globalHistory[globalHistory.length - 1 - this.historyIndex];
-            input.value = cmd;
+            // 多个候选，循环切换
+            if (this.tabCandidates.length === 0 || this.tabOriginal !== input.value) {
+                this.tabCandidates = completions;
+                this.tabOriginal = input.value;
+                this.tabIndex = -1;
+            }
+            this.tabIndex = (this.tabIndex + 1) % this.tabCandidates.length;
+            const parts = this.tabOriginal.split(' ');
+            parts[parts.length - 1] = this.tabCandidates[this.tabIndex];
+            input.value = parts.join(' ');
+
+            // 显示候选列表
+            this._showTabHints(completions);
         }
     }
 
-    // 工具方法
+    _showTabHints(completions) {
+        const hintId = `tab-hint-${this.id}`;
+        // 移除旧的提示
+        const old = document.getElementById(hintId);
+        if (old) old.parentElement.remove();
+
+        const hint = completions.slice(0, 10).join('  ');
+        this.outputHtml += `
+            <div class="terminal-line tab-hint-line" id="${hintId}-wrap">
+                <span class="terminal-result tab-hint" id="${hintId}">${AnsiRenderer._escapeHtml(hint)}</span>
+            </div>
+        `;
+        TerminalManager.updateCurrentTerminalOutput();
+        TerminalManager.scrollToBottom();
+    }
+
+    clearTabHints() {
+        this.outputHtml = this.outputHtml.replace(
+            /<div class="terminal-line tab-hint-line"[^>]*>[\s\S]*?<\/div>/g, ''
+        );
+        this.tabCandidates = [];
+        this.tabIndex = -1;
+    }
+
+    _getCwdPrompt() {
+        if (!this.cwd) return '>';
+        // 只显示最后一级目录名
+        const parts = this.cwd.replace(/\\/g, '/').split('/').filter(Boolean);
+        const dir = parts[parts.length - 1] || this.cwd;
+        return `${dir}>`;
+    }
+
     escapeHtml(text) {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
     }
-
-    sleep(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms));
-    }
 }
 
-// 终端管理器
+// ============ 终端管理器 ============
 const TerminalManager = {
-    terminals: [], // 所有终端实例
-    currentTerminalId: null, // 当前激活的终端 ID
-    nextId: 1, // 下一个终端 ID
+    terminals: [],
+    currentTerminalId: null,
+    nextId: 1,
     isInitialized: false,
+    socket: null,
 
-    // 全局命令历史（独立保存，不跟终端实例绑定）
-    globalHistoryCommands: [], // 去重的历史（最多50条）
-    globalCommandHistory: [], // 完整历史（用于上下键导航，最多100条）
+    globalHistoryCommands: [],
+    globalCommandHistory: [],
 
     // 初始化
     init() {
         if (this.isInitialized) return;
         this.isInitialized = true;
 
-        // 加载全局历史
         this.loadGlobalHistory();
-
-        // 创建第一个终端
+        this._connectWebSocket();
         this.createNewTerminal();
-
-        // 设置输入框事件
         this.setupInputEvents();
 
-        // 渲染 feather 图标
-        if (typeof feather !== 'undefined') {
-            feather.replace();
+        if (typeof feather !== 'undefined') feather.replace();
+    },
+
+    // 建立 WebSocket 连接
+    _connectWebSocket() {
+        if (typeof io === 'undefined') {
+            console.warn('Socket.IO 未加载，将使用 REST 降级模式');
+            return;
         }
+
+        this.socket = io();
+
+        this.socket.on('connect', () => {
+            console.log('WebSocket 已连接:', this.socket.id);
+        });
+
+        this.socket.on('disconnect', () => {
+            console.warn('WebSocket 断开连接');
+        });
+
+        // 流式输出
+        this.socket.on('output', (data) => {
+            const terminal = this.terminals.find(t => t.id === data.terminal_id);
+            if (!terminal) return;
+            terminal.appendOutput(data.data, data.type || 'output');
+            if (this.currentTerminalId === data.terminal_id) {
+                this.updateCurrentTerminalOutput();
+            }
+        });
+
+        // 命令执行完成
+        this.socket.on('command_done', (data) => {
+            const terminal = this.terminals.find(t => t.id === data.terminal_id);
+            if (!terminal) return;
+            terminal.finalizeOutput();
+            if (data.cwd) terminal.cwd = data.cwd;
+            if (this.currentTerminalId === data.terminal_id) {
+                this.updateCurrentTerminalOutput();
+                this.updatePrompt();
+            }
+        });
+
+        // Tab 补全结果
+        this.socket.on('tab_completions', (data) => {
+            const terminal = this.terminals.find(t => t.id === data.terminal_id);
+            if (!terminal) return;
+            const input = document.getElementById('terminalInput');
+            if (input) terminal.handleTab(input, data.completions);
+        });
+
+        // cwd 更新
+        this.socket.on('cwd_update', (data) => {
+            const terminal = this.terminals.find(t => t.id === data.terminal_id);
+            if (terminal) {
+                terminal.cwd = data.cwd;
+                if (this.currentTerminalId === data.terminal_id) this.updatePrompt();
+            }
+        });
     },
 
     // 设置输入框事件
@@ -193,63 +344,91 @@ const TerminalManager = {
         if (!input) return;
 
         input.addEventListener('keydown', (e) => {
+            const terminal = this.getCurrentTerminal();
+            if (!terminal) return;
+
             if (e.key === 'Enter') {
                 e.preventDefault();
+                terminal.clearTabHints();
                 this.handleCommand();
             } else if (e.key === 'ArrowUp') {
                 e.preventDefault();
+                terminal.clearTabHints();
                 this.navigateHistory('up');
             } else if (e.key === 'ArrowDown') {
                 e.preventDefault();
+                terminal.clearTabHints();
                 this.navigateHistory('down');
+            } else if (e.key === 'Tab') {
+                e.preventDefault();
+                this._requestTabComplete(input.value, terminal);
+            } else if (e.key === 'c' && e.ctrlKey) {
+                e.preventDefault();
+                this._sendInterrupt(terminal);
+            } else if (e.key !== 'Tab') {
+                // 非 Tab 键清除 Tab 候选
+                if (e.key !== 'Shift' && e.key !== 'Control' && e.key !== 'Alt') {
+                    terminal.tabCandidates = [];
+                    terminal.tabIndex = -1;
+                }
             }
         });
 
-        // 自动聚焦
         input.focus();
 
-        // 点击终端区域自动聚焦输入框
         const terminalMain = document.getElementById('terminalMain');
         if (terminalMain) {
             terminalMain.addEventListener('click', (e) => {
-                // 检查是否有文本被选中
                 const selection = window.getSelection();
-                if (selection && selection.toString().length > 0) {
-                    // 有文本被选中，不聚焦输入框（保持选择）
-                    return;
-                }
-
-                // 没有选中文本，聚焦输入框
+                if (selection && selection.toString().length > 0) return;
                 input.focus();
             });
         }
     },
 
+    // 请求 Tab 补全
+    _requestTabComplete(partial, terminal) {
+        if (this.socket && this.socket.connected) {
+            this.socket.emit('tab_complete', {
+                partial: partial,
+                terminal_id: terminal.id
+            });
+        }
+    },
+
+    // 发送 Ctrl+C 中断
+    _sendInterrupt(terminal) {
+        if (this.socket && this.socket.connected) {
+            this.socket.emit('interrupt', { terminal_id: terminal.id });
+        }
+        terminal.isRunning = false;
+        this.updateInputState();
+    },
+
     // 创建新终端
     createNewTerminal() {
         const id = this.nextId++;
-        const name = `终端 ${id}`;
-        const terminal = new Terminal(id, name);
+        const terminal = new Terminal(id, `终端 ${id}`);
 
-        this.terminals.push(terminal);
-
-        // 添加欢迎消息（每次都是新的，不持久化）
         terminal.outputHtml = `
             <div class="terminal-line welcome-message">
                 <span class="terminal-prompt">></span>
-                <span class="terminal-text">欢迎使用 CoolTerminal - 现代化终端模拟器</span>
+                <span class="terminal-text">欢迎使用 CoolTerminal v2.0 - 实时流式终端</span>
             </div>
             <div class="terminal-line">
                 <span class="terminal-prompt">></span>
-                <span class="terminal-text">输入命令执行，或查看右上角的命令参考手册</span>
+                <span class="terminal-text">支持实时输出 · Tab 补全 · Ctrl+C 中断 · ANSI 颜色</span>
             </div>
         `;
 
-        // 切换到新终端
+        this.terminals.push(terminal);
         this.switchTerminal(id);
-
-        // 更新 UI
         this.updateTerminalTabs();
+
+        // 获取初始 cwd
+        if (this.socket && this.socket.connected) {
+            this.socket.emit('get_cwd', { terminal_id: id });
+        }
 
         return terminal;
     },
@@ -260,17 +439,14 @@ const TerminalManager = {
         this.updateCurrentTerminalOutput();
         this.updateHistoryPanel();
         this.updateTerminalTabs();
+        this.updatePrompt();
 
-        // 聚焦输入框
         const input = document.getElementById('terminalInput');
-        if (input) {
-            input.focus();
-        }
+        if (input) input.focus();
     },
 
     // 关闭终端
     closeTerminal(id) {
-        // 至少保留一个终端
         if (this.terminals.length <= 1) {
             alert('至少需要保留一个终端');
             return;
@@ -279,20 +455,16 @@ const TerminalManager = {
         const index = this.terminals.findIndex(t => t.id === id);
         if (index === -1) return;
 
-        // 删除终端
         this.terminals.splice(index, 1);
 
-        // 如果关闭的是当前终端，切换到其他终端
         if (this.currentTerminalId === id) {
-            const newTerminal = this.terminals[Math.min(index, this.terminals.length - 1)];
-            this.switchTerminal(newTerminal.id);
+            const next = this.terminals[Math.min(index, this.terminals.length - 1)];
+            this.switchTerminal(next.id);
         }
 
-        // 更新 UI
         this.updateTerminalTabs();
     },
 
-    // 获取当前终端
     getCurrentTerminal() {
         return this.terminals.find(t => t.id === this.currentTerminalId);
     },
@@ -301,127 +473,137 @@ const TerminalManager = {
     async handleCommand() {
         const input = document.getElementById('terminalInput');
         const command = input.value.trim();
-
         if (!command) return;
 
         const terminal = this.getCurrentTerminal();
         if (!terminal) return;
+        if (terminal.isRunning) return;
 
-        // 清空输入
         input.value = '';
+        terminal.historyIndex = -1;
+        this.addToGlobalHistory(command);
+        terminal.addCommandLine(command);
+        this.updateCurrentTerminalOutput();
 
-        // 执行命令
-        await terminal.executeCommand(command);
+        // 内置命令
+        if (command === 'clear' || command === 'cls') {
+            terminal.clear();
+            this.updateCurrentTerminalOutput();
+            return;
+        }
 
-        // 更新历史面板（输出已在 typeOutput 中更新）
-        this.updateHistoryPanel();
+        terminal.isRunning = true;
+        this.updateInputState();
+
+        if (this.socket && this.socket.connected) {
+            // WebSocket 模式（流式）
+            this.socket.emit('execute', {
+                command: command,
+                terminal_id: terminal.id
+            });
+        } else {
+            // REST 降级模式
+            await this._executeRest(command, terminal);
+        }
+    },
+
+    // REST 降级执行
+    async _executeRest(command, terminal) {
+        try {
+            const response = await fetch('/api/terminal/execute', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ command, session_id: `rest-${terminal.id}` })
+            });
+            const data = await response.json();
+            const output = data.output || (data.success ? '命令执行成功（无输出）' : data.error);
+            const type = data.success ? 'success' : 'error';
+            terminal.appendOutput(output + '\n', type);
+            if (data.cwd) terminal.cwd = data.cwd;
+        } catch (err) {
+            terminal.appendOutput(`连接错误: ${err.message}\n`, 'error');
+        } finally {
+            terminal.finalizeOutput();
+            this.updateCurrentTerminalOutput();
+            this.updatePrompt();
+        }
     },
 
     // 历史导航
     navigateHistory(direction) {
         const terminal = this.getCurrentTerminal();
         if (!terminal) return;
-
         const input = document.getElementById('terminalInput');
-        if (!input) return;
+        if (input) terminal.navigateHistory(direction, input);
+    },
 
-        terminal.navigateHistory(direction, input);
+    // 更新输入框状态（运行中禁用）
+    updateInputState() {
+        const terminal = this.getCurrentTerminal();
+        const input = document.getElementById('terminalInput');
+        if (!input || !terminal) return;
+        input.disabled = terminal.isRunning;
+        input.placeholder = terminal.isRunning ? '命令执行中... (Ctrl+C 中断)' : '输入命令...';
+        if (!terminal.isRunning) input.focus();
+    },
+
+    // 更新提示符显示
+    updatePrompt() {
+        const terminal = this.getCurrentTerminal();
+        const promptEl = document.getElementById('terminalPromptDisplay');
+        if (!promptEl || !terminal) return;
+        promptEl.textContent = terminal._getCwdPrompt();
     },
 
     // === 全局历史管理 ===
-
-    // 添加到全局历史
     addToGlobalHistory(command) {
-        // 检查是否已存在（不重复）
-        const existingIndex = this.globalHistoryCommands.indexOf(command);
-        if (existingIndex !== -1) {
-            // 如果已存在，移除旧的
-            this.globalHistoryCommands.splice(existingIndex, 1);
-        }
-
-        // 添加到开头
+        const idx = this.globalHistoryCommands.indexOf(command);
+        if (idx !== -1) this.globalHistoryCommands.splice(idx, 1);
         this.globalHistoryCommands.unshift(command);
+        if (this.globalHistoryCommands.length > 50) this.globalHistoryCommands.length = 50;
 
-        // 限制最多50条
-        if (this.globalHistoryCommands.length > 50) {
-            this.globalHistoryCommands = this.globalHistoryCommands.slice(0, 50);
-        }
-
-        // 同时更新完整历史（用于上下键导航）
         this.globalCommandHistory.push(command);
-        if (this.globalCommandHistory.length > 100) {
-            this.globalCommandHistory.shift();
-        }
+        if (this.globalCommandHistory.length > 100) this.globalCommandHistory.shift();
 
-        // 保存到 localStorage
         this.saveGlobalHistory();
-
-        // 更新历史面板
         this.updateHistoryPanel();
     },
 
-    // 获取全局历史命令
-    getGlobalHistoryCommands() {
-        return this.globalHistoryCommands;
-    },
+    getGlobalHistoryCommands() { return this.globalHistoryCommands; },
+    getGlobalCommandHistory() { return this.globalCommandHistory; },
 
-    // 获取全局完整历史（用于上下键）
-    getGlobalCommandHistory() {
-        return this.globalCommandHistory;
-    },
-
-    // 保存全局历史
     saveGlobalHistory() {
         try {
             localStorage.setItem('coolterminal_global_history', JSON.stringify(this.globalHistoryCommands));
             localStorage.setItem('coolterminal_global_command_history', JSON.stringify(this.globalCommandHistory));
-        } catch (e) {
-            console.error('保存历史记录失败:', e);
-        }
+        } catch (e) {}
     },
 
-    // 加载全局历史
     loadGlobalHistory() {
         try {
-            const history = localStorage.getItem('coolterminal_global_history');
-            if (history) {
-                this.globalHistoryCommands = JSON.parse(history);
-            }
-
-            const commandHistory = localStorage.getItem('coolterminal_global_command_history');
-            if (commandHistory) {
-                this.globalCommandHistory = JSON.parse(commandHistory);
-            }
+            const h = localStorage.getItem('coolterminal_global_history');
+            if (h) this.globalHistoryCommands = JSON.parse(h);
+            const ch = localStorage.getItem('coolterminal_global_command_history');
+            if (ch) this.globalCommandHistory = JSON.parse(ch);
         } catch (e) {
-            console.error('加载历史记录失败:', e);
             this.globalHistoryCommands = [];
             this.globalCommandHistory = [];
         }
     },
 
-    // 清空全局历史
     clearGlobalHistory() {
-        if (!confirm('确定要清空所有命令历史吗？')) {
-            return;
-        }
-
+        if (!confirm('确定要清空所有命令历史吗？')) return;
         this.globalHistoryCommands = [];
         this.globalCommandHistory = [];
-
-        // 重置所有终端的历史索引
         this.terminals.forEach(t => t.historyIndex = -1);
-
         this.saveGlobalHistory();
         this.updateHistoryPanel();
     },
 
     // === UI 更新 ===
-
-    // 更新当前终端输出
     updateCurrentTerminalOutput() {
         const terminal = this.getCurrentTerminal();
         if (!terminal) return;
-
         const output = document.getElementById('terminalOutput');
         if (output) {
             output.innerHTML = terminal.outputHtml;
@@ -429,7 +611,6 @@ const TerminalManager = {
         }
     },
 
-    // 更新历史面板
     updateHistoryPanel() {
         const historyList = document.getElementById('historyList');
         if (!historyList) return;
@@ -437,7 +618,7 @@ const TerminalManager = {
         if (this.globalHistoryCommands.length === 0) {
             historyList.innerHTML = `
                 <div class="history-empty">
-                    <i data-feather="terminal" style="width: 32px; height: 32px; opacity: 0.3;"></i>
+                    <i data-feather="terminal" style="width:32px;height:32px;opacity:0.3;"></i>
                     <p>暂无命令历史</p>
                 </div>
             `;
@@ -445,10 +626,10 @@ const TerminalManager = {
             return;
         }
 
-        historyList.innerHTML = this.globalHistoryCommands.map((cmd) => {
-            const escapedCmd = this.escapeHtml(cmd).replace(/'/g, "\\'");
+        historyList.innerHTML = this.globalHistoryCommands.map(cmd => {
+            const escaped = this.escapeHtml(cmd).replace(/'/g, "\\'");
             return `
-                <div class="history-item" onclick="TerminalManager.executeFromHistory('${escapedCmd}')">
+                <div class="history-item" onclick="TerminalManager.executeFromHistory('${escaped}')">
                     <div class="history-item-content">
                         <div class="history-command">${this.escapeHtml(cmd)}</div>
                         <div class="history-time">最近使用</div>
@@ -460,20 +641,19 @@ const TerminalManager = {
         if (typeof feather !== 'undefined') feather.replace();
     },
 
-    // 更新终端标签列表
     updateTerminalTabs() {
         const tabsList = document.getElementById('terminalTabsList');
         if (!tabsList) return;
 
-        tabsList.innerHTML = this.terminals.map(terminal => {
-            const isActive = terminal.id === this.currentTerminalId;
+        tabsList.innerHTML = this.terminals.map(t => {
+            const isActive = t.id === this.currentTerminalId;
             return `
                 <div class="terminal-tab-item ${isActive ? 'active' : ''}"
-                     onclick="TerminalManager.switchTerminal(${terminal.id})">
+                     onclick="TerminalManager.switchTerminal(${t.id})">
                     <i data-feather="terminal" class="terminal-tab-icon"></i>
-                    <span class="terminal-tab-name">${terminal.name}</span>
+                    <span class="terminal-tab-name">${t.name}</span>
                     <button class="terminal-tab-close"
-                            onclick="event.stopPropagation(); TerminalManager.closeTerminal(${terminal.id})"
+                            onclick="event.stopPropagation(); TerminalManager.closeTerminal(${t.id})"
                             title="关闭终端">
                         <i data-feather="x"></i>
                     </button>
@@ -484,56 +664,33 @@ const TerminalManager = {
         if (typeof feather !== 'undefined') feather.replace();
     },
 
-    // 从历史执行命令
     executeFromHistory(command) {
         const input = document.getElementById('terminalInput');
-        if (input) {
-            input.value = command;
-            input.focus();
-        }
+        if (input) { input.value = command; input.focus(); }
     },
 
-    // 切换历史面板
     toggleHistory() {
         const panel = document.getElementById('historyPanel');
         if (!panel) return;
-
         panel.classList.toggle('hidden');
-
-        // 更新按钮状态
         const btn = document.getElementById('historyToggleBtn');
-        if (btn) {
-            if (panel.classList.contains('hidden')) {
-                btn.style.opacity = '0.6';
-            } else {
-                btn.style.opacity = '1';
-            }
-        }
+        if (btn) btn.style.opacity = panel.classList.contains('hidden') ? '0.6' : '1';
     },
 
-    // 清空历史
-    clearHistory() {
-        this.clearGlobalHistory();
-    },
+    clearHistory() { this.clearGlobalHistory(); },
 
-    // 清空屏幕
     clearScreen() {
         const terminal = this.getCurrentTerminal();
         if (!terminal) return;
-
         terminal.clear();
         this.updateCurrentTerminalOutput();
     },
 
-    // 滚动到底部
     scrollToBottom() {
         const output = document.getElementById('terminalOutput');
-        if (output) {
-            output.scrollTop = output.scrollHeight;
-        }
+        if (output) output.scrollTop = output.scrollHeight;
     },
 
-    // 工具方法
     escapeHtml(text) {
         const div = document.createElement('div');
         div.textContent = text;
